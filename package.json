@@ -1,7 +1,7 @@
 {
-    "name": "frappe-gantt",
-    "version": "1.0.3",
-    "description": "A simple, modern, interactive gantt library for the web",
+    "name": "@kele23/gantt",
+    "version": "0.0.1",
+    "description": "A simple, modern, interactive gantt library for the web based on Frappe Gantt",
     "main": "src/index.js",
     "type": "module",
     "scripts": {
@@ -14,7 +14,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/frappe/gantt.git"
+        "url": "git+https://github.com/kele23/gantt.git"
     },
     "files": [
         "src",
@@ -36,7 +36,7 @@
         "interactive gantt",
         "project management"
     ],
-    "author": "Faris Ansari",
+    "author": "Michele Scala",
     "license": "MIT",
     "bugs": {
         "url": "https://github.com/frappe/gantt/issues"
