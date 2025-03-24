@@ -11,11 +11,11 @@ import { DEFAULT_OPTIONS, DEFAULT_VIEW_MODES } from './defaults';
 import './styles/gantt.css';
 
 export default class Gantt {
-    constructor(wrapper, tasks, options, task_groups = []) {
+    constructor(wrapper, tasks, options = {}, task_groups = []) {
         this.setup_wrapper(wrapper);
         this.setup_options(options);
-        if (options.locales) {
-            addLocales(options.locales);
+        if (this.options.locales) {
+            addLocales(this.options.locales);
         }
         this.setup_task_groups(task_groups);
         this.setup_tasks(tasks);
@@ -81,7 +81,7 @@ export default class Gantt {
     }
 
     setup_options(options) {
-        this.original_options = options;
+        this.original_options = options || {};
         this.options = deepMerge(DEFAULT_OPTIONS, options);
         const CSS_VARIABLES = {
             'grid-height': 'container_height',
@@ -124,7 +124,7 @@ export default class Gantt {
         }
 
         if (
-            !this.original_options.scroll_to &&
+            !this.options.scroll_to &&
             this.options.enable_left_sidebar_list
         ) {
             this.options.scroll_to = 'start';
@@ -152,7 +152,9 @@ export default class Gantt {
             .map((task, i) => {
                 if (!task.start) {
                     console.error(
-                        gettext('task_no_start_date', this.options.language, { id: task.id || '' }),
+                        gettext('task_no_start_date', this.options.language, {
+                            id: task.id || '',
+                        }),
                     );
                     return false;
                 }
@@ -170,7 +172,9 @@ export default class Gantt {
                 }
                 if (!task.end) {
                     console.error(
-                        gettext('task_no_end_date', this.options.language, { id: task.id || '' }),
+                        gettext('task_no_end_date', this.options.language, {
+                            id: task.id || '',
+                        }),
                     );
                     return false;
                 }
@@ -179,7 +183,9 @@ export default class Gantt {
                 let diff = date_utils.diff(task._end, task._start, 'year');
                 if (diff < 0) {
                     console.error(
-                        gettext('task_start_after_end', this.options.language, { id: task.id || '' }),
+                        gettext('task_start_after_end', this.options.language, {
+                            id: task.id || '',
+                        }),
                     );
                     return false;
                 }
@@ -187,7 +193,11 @@ export default class Gantt {
                 // make task invalid if duration too large
                 if (date_utils.diff(task._end, task._start, 'year') > 10) {
                     console.error(
-                        gettext('task_duration_too_long', this.options.language, { id: task.id || '' }),
+                        gettext(
+                            'task_duration_too_long',
+                            this.options.language,
+                            { id: task.id || '' },
+                        ),
                     );
                     return false;
                 }
