@@ -113,21 +113,32 @@ const DEFAULT_OPTIONS = {
     auto_move_label: false,
     bar_corner_radius: 3,
     bar_height: 30,
+    bar_config: {
+        show_label_on_offset: true,
+    },
+    base_z_index: 1000,
     container_height: 'auto',
     column_width: null,
     date_format: 'YYYY-MM-DD HH:mm',
-    upper_header_height: 45,
-    lower_header_height: 30,
-    snap_at: null,
-    infinite_padding: true,
+    enable_left_sidebar_list: false,
     holidays: { 'var(--g-weekend-highlight-color)': 'weekend' },
     ignore: [],
+    infinite_padding: true,
     language: 'en',
+    left_sidebar_list_config: {
+        width: 200,
+    },
     lines: 'both',
+    lower_header_height: 30,
     move_dependencies: true,
     padding: 18,
     popup: (ctx) => {
-        ctx.set_title(ctx.task.name);
+        let title = ctx.task.name;
+        if (ctx.task_group) {
+            title = `${ctx.task.name} (${ctx.task_group.name})`;
+        }
+        ctx.set_title(title);
+
         if (ctx.task.description) ctx.set_subtitle(ctx.task.description);
         else ctx.set_subtitle('');
 
@@ -152,12 +163,15 @@ const DEFAULT_OPTIONS = {
         );
     },
     popup_on: 'click',
+    readonly: false,
     readonly_progress: false,
     readonly_dates: false,
-    readonly: false,
     scroll_to: 'today',
     show_expected_progress: false,
+    snap_at: null,
+    task_groups_enabled: false,
     today_button: true,
+    upper_header_height: 45,
     view_mode: 'Day',
     view_mode_select: false,
     view_modes: DEFAULT_VIEW_MODES,

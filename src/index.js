@@ -11,12 +11,13 @@ import { DEFAULT_OPTIONS, DEFAULT_VIEW_MODES } from './defaults';
 import './styles/gantt.css';
 
 export default class Gantt {
-    constructor(wrapper, tasks, options) {
+    constructor(wrapper, tasks, options, task_groups = []) {
         this.setup_wrapper(wrapper);
         this.setup_options(options);
         if (options.locales) {
             addLocales(options.locales);
         }
+        this.setup_task_groups(task_groups);
         this.setup_tasks(tasks);
         this.change_view_mode();
         this.bind_events();
@@ -49,11 +50,16 @@ export default class Gantt {
             );
         }
 
+        this.$main_wrapper = this.create_el({
+            classes: 'main-wrapper',
+            append_to: wrapper_element,
+        });
+
         // svg element
         if (!svg_element) {
             // create it
             this.$svg = createSVG('svg', {
-                append_to: wrapper_element,
+                append_to: this.$main_wrapper,
                 class: 'gantt',
             });
         } else {
@@ -76,7 +82,7 @@ export default class Gantt {
 
     setup_options(options) {
         this.original_options = options;
-        this.options = { ...DEFAULT_OPTIONS, ...options };
+        this.options = deepMerge(DEFAULT_OPTIONS, options);
         const CSS_VARIABLES = {
             'grid-height': 'container_height',
             'bar-height': 'bar_height',
@@ -116,11 +122,29 @@ export default class Gantt {
         } else {
             this.config.ignored_function = this.options.ignore;
         }
+
+        if (
+            !this.original_options.scroll_to &&
+            this.options.enable_left_sidebar_list
+        ) {
+            this.options.scroll_to = 'start';
+        }
+
+        this.$popup_wrapper.style.zIndex = this.options.base_z_index + 2;
     }
 
     update_options(options) {
         this.setup_options({ ...this.original_options, ...options });
         this.change_view_mode(undefined, true);
+    }
+
+    setup_task_groups(task_groups) {
+        if (!Array.isArray(task_groups)) {
+            throw new TypeError('task_groups must be an array when defined');
+        }
+
+        this.task_groups = task_groups;
+        this.options.task_groups_enabled = this.task_groups.length > 0;
     }
 
     setup_tasks(tasks) {
@@ -168,8 +192,11 @@ export default class Gantt {
                     return false;
                 }
 
-                // cache index
-                task._index = i;
+                const { is_valid, message } = this.cache_index(task, i);
+                if (!is_valid) {
+                    console.error(message);
+                    return false;
+                }
 
                 // if hours is not set, assume the last day is full day
                 // e.g: 2018-09-09 becomes 2018-09-09 23:59:59
@@ -208,6 +235,34 @@ export default class Gantt {
         this.setup_dependencies();
     }
 
+    cache_index(task, index) {
+        if (!this.options.task_groups_enabled) {
+            // set to default behavior
+            task._index = index;
+            return { is_valid: true };
+        }
+
+        if (!task.task_group_id) {
+            return {
+                is_valid: false,
+                message: `missing "task_group_id" property on task "${task.id}" since "task_groups" are defined`,
+            };
+        }
+
+        const task_group_index = this.task_groups.findIndex(
+            (task_group) => task_group.id === task.task_group_id,
+        );
+        if (task_group_index < 0) {
+            return {
+                is_valid: false,
+                message: `"task_group_id" not found in "task_groups" for task "${task.id}"`,
+            };
+        }
+
+        task._index = task_group_index;
+        return { is_valid: true };
+    }
+
     setup_dependencies() {
         this.dependency_map = {};
         for (let t of this.tasks) {
@@ -218,9 +273,10 @@ export default class Gantt {
         }
     }
 
-    refresh(tasks) {
+    refresh(tasks, task_groups = [], reset_scroll = false) {
+        this.setup_task_groups(task_groups);
         this.setup_tasks(tasks);
-        this.change_view_mode();
+        this.change_view_mode(undefined, !reset_scroll);
     }
 
     update_task(id, new_details) {
@@ -348,7 +404,6 @@ export default class Gantt {
 
     bind_events() {
         this.bind_grid_click();
-        this.bind_holiday_labels();
         this.bind_bar_events();
     }
 
@@ -361,6 +416,7 @@ export default class Gantt {
         this.make_bars();
         this.make_arrows();
         this.map_arrows_on_bars();
+        this.fill_left_sidebar_list();
         this.set_dimensions();
         this.set_scroll_position(this.options.scroll_to);
     }
@@ -391,6 +447,7 @@ export default class Gantt {
         this.make_grid_background();
         this.make_grid_rows();
         this.make_grid_header();
+        this.make_left_sidebar_list();
         this.make_side_header();
     }
 
@@ -401,11 +458,14 @@ export default class Gantt {
 
     make_grid_background() {
         const grid_width = this.dates.length * this.config.column_width;
+        const sidebar_list_items = this.options.task_groups_enabled
+            ? this.task_groups
+            : this.tasks;
         const grid_height = Math.max(
             this.config.header_height +
                 this.options.padding +
                 (this.options.bar_height + this.options.padding) *
-                    this.tasks.length -
+                    sidebar_list_items.length -
                 10,
             this.options.container_height !== 'auto'
                 ? this.options.container_height
@@ -459,6 +519,7 @@ export default class Gantt {
             classes: 'grid-header',
             append_to: this.$container,
         });
+        this.$header.style.zIndex = this.options.base_z_index + 1;
 
         this.$upper_header = this.create_el({
             classes: 'upper-header',
@@ -470,8 +531,32 @@ export default class Gantt {
         });
     }
 
+    make_left_sidebar_list() {
+        if (!this.options.enable_left_sidebar_list) {
+            return;
+        }
+
+        this.$left_sidebar_list_fixer_container = this.create_el({
+            width: this.options.left_sidebar_list_config.width,
+            classes: 'left-sidebar-list-fixer',
+            prepend_to: this.$main_wrapper,
+        });
+
+        this.$left_sidebar_list_container = this.create_el({
+            width: this.options.left_sidebar_list_config.width,
+            classes: 'left-sidebar-list',
+            append_to: this.$main_wrapper,
+        });
+        this.$left_sidebar_list_container.style.zIndex =
+            this.options.base_z_index + 2;
+
+        this.$left_sidebar_list_fixer_container.style.flexBasis =
+            this.options.left_sidebar_list_config.width + 'px';
+    }
+
     make_side_header() {
         this.$side_header = this.create_el({ classes: 'side-header' });
+        this.$side_header.style.zIndex = this.options.base_z_index + 1;
         this.$upper_header.prepend(this.$side_header);
 
         // Create view mode change select
@@ -636,18 +721,8 @@ export default class Gantt {
                             this.config.step) *
                         this.config.column_width;
                     const height = this.grid_height - this.config.header_height;
-                    const d_formatted = date_utils
-                        .format(d, 'YYYY-MM-DD', this.options.language)
-                        .replace(' ', '_');
 
-                    if (labels[d]) {
-                        let label = this.create_el({
-                            classes: 'holiday-label ' + 'label_' + d_formatted,
-                            append_to: this.$extras,
-                        });
-                        label.textContent = labels[d];
-                    }
-                    createSVG('rect', {
+                    const bar_holiday = createSVG('rect', {
                         x: Math.round(x),
                         y: this.config.header_height,
                         width:
@@ -657,13 +732,66 @@ export default class Gantt {
                                 'day',
                             ),
                         height,
-                        class: 'holiday-highlight ' + d_formatted,
                         style: `fill: ${color};`,
                         append_to: this.layers.grid,
                     });
+
+                    if (d && labels[d]) {
+                        // this means is a holiday
+                        bar_holiday.setAttribute('label', labels[d]);
+                        bar_holiday.setAttribute(
+                            'date',
+                            date_utils.format(
+                                d,
+                                'YYYY-MM-DD',
+                                this.options.language,
+                            ),
+                        );
+                        bar_holiday.classList.add('holiday-highlight');
+                    }
                 }
             }
+
+            this.setup_holiday_popup();
         }
+    }
+
+    setup_holiday_popup() {
+        let timeout;
+
+        $.on(this.$container, 'mouseover', '.holiday-highlight', (e) => {
+            timeout = setTimeout(() => {
+                const date = e.target.getAttribute('date');
+                const label = e.target.getAttribute('label');
+
+                this.show_popup({
+                    x: e.clientX,
+                    y: e.clientY,
+                    type: 'holiday',
+                    // TODO: creating and passing a task object
+                    // from holidays since current popup implementation
+                    // depends entirely on tasks and now we have multiple
+                    // components like sidebar items or annotations.
+                    task: {
+                        name: label,
+                        _start: date_utils.parse(e.target.getAttribute('date')),
+                        _end: date_utils.add(
+                            date_utils.parse(e.target.getAttribute('date')),
+                            1,
+                            'day',
+                        ),
+                        actual_duration: 1,
+                        progress: 1,
+                    },
+                    target: e.target,
+                });
+            }, 200);
+        });
+
+        $.on(this.$container, 'mouseout', '.holiday-highlight', () => {
+            clearTimeout(timeout);
+            this.popup?.hide?.();
+        });
     }
 
     /**
@@ -694,6 +822,7 @@ export default class Gantt {
             classes: 'current-highlight',
             append_to: this.$container,
         });
+        this.$current_highlight.style.zIndex = this.options.base_z_index;
         this.$current_ball_highlight = this.create_el({
             top: this.config.header_height - 6,
             left: left - 2.5,
@@ -702,6 +831,8 @@ export default class Gantt {
             classes: 'current-ball-highlight',
             append_to: this.$header,
         });
+        this.$current_ball_highlight.style.zIndex =
+            this.options.base_z_index + 2;
     }
 
     make_grid_highlights() {
@@ -756,7 +887,17 @@ export default class Gantt {
         if (!highlightDimensions) return;
     }
 
-    create_el({ left, top, width, height, id, classes, append_to, type }) {
+    create_el({
+        left,
+        top,
+        width,
+        height,
+        id,
+        classes,
+        append_to,
+        prepend_to,
+        type,
+    }) {
         let $el = document.createElement(type || 'div');
         for (let cls of classes.split(' ')) $el.classList.add(cls);
         $el.style.top = top + 'px';
@@ -765,6 +906,7 @@ export default class Gantt {
         if (width) $el.style.width = width + 'px';
         if (height) $el.style.height = height + 'px';
         if (append_to) append_to.appendChild($el);
+        if (prepend_to) prepend_to.prepend($el);
         return $el;
     }
 
@@ -855,6 +997,55 @@ export default class Gantt {
             upper_y: 17,
             lower_y: this.options.upper_header_height + 5,
         };
+    }
+
+    fill_left_sidebar_list() {
+        if (!this.options.enable_left_sidebar_list) {
+            return;
+        }
+
+        const sidebar_list_items = this.options.task_groups_enabled
+            ? this.task_groups
+            : this.tasks;
+
+        sidebar_list_items.forEach((item, index) => {
+            const row = this.create_el({
+                classes: 'left-sidebar-list-row',
+                append_to: this.$left_sidebar_list_container,
+            });
+            row.textContent = item.name;
+
+            row.style.height =
+                this.options.bar_height + this.options.padding + 'px';
+
+            if (
+                typeof this.options.left_sidebar_list_config.on_click ===
+                'function'
+            ) {
+                row.classList.add('clickable');
+
+                $.on(row, 'click', () => {
+                    const payload = this.options.task_groups_enabled
+                        ? {
+                              task_group: item,
+                          }
+                        : {
+                              task: item,
+                          };
+
+                    this.options.left_sidebar_list_config.on_click(payload);
+                });
+            }
+        });
+
+        // add empty row for cover little empty row from grid
+        const emptyRow = this.create_el({
+            classes: 'left-sidebar-list-row',
+            append_to: this.$left_sidebar_list_container,
+        });
+
+        // adding -1 to remove unnecessary scroll
+        emptyRow.style.height = -1 + this.options.padding / 2 + 'px';
     }
 
     make_bars() {
@@ -1029,36 +1220,12 @@ export default class Gantt {
         $.on(
             this.$container,
             'click',
-            '.grid-row, .grid-header, .ignored-bar, .holiday-highlight',
+            '.grid-row, .grid-header, .ignored-bar',
             () => {
                 this.unselect_all();
                 this.hide_popup();
             },
         );
-    }
-
-    bind_holiday_labels() {
-        const $highlights =
-            this.$container.querySelectorAll('.holiday-highlight');
-        for (let h of $highlights) {
-            const label = this.$container.querySelector(
-                '.label_' + h.classList[1],
-            );
-            if (!label) continue;
-            let timeout;
-            h.onmouseenter = (e) => {
-                timeout = setTimeout(() => {
-                    label.classList.add('show');
-                    label.style.left = (e.offsetX || e.layerX) + 'px';
-                    label.style.top = (e.offsetY || e.layerY) + 'px';
-                }, 300);
-            };
-
-            h.onmouseleave = (e) => {
-                clearTimeout(timeout);
-                label.classList.remove('show');
-            };
-        }
     }
 
     get_start_end_positions() {
@@ -1552,6 +1719,12 @@ export default class Gantt {
             );
     }
 
+    get_task_group_for_task(task) {
+        return this.task_groups.find(
+            (task_group) => task_group.id === task.task_group_id,
+        );
+    }
+
     /**
      * Clear all elements from the parent svg element
      *
@@ -1563,6 +1736,8 @@ export default class Gantt {
         this.$side_header?.remove?.();
         this.$current_highlight?.remove?.();
         this.$extras?.remove?.();
+        this.$left_sidebar_list_fixer_container?.remove?.();
+        this.$left_sidebar_list_container?.remove?.();
         this.popup?.hide?.();
     }
 }
@@ -1583,4 +1758,19 @@ function generate_id(task) {
 
 function sanitize(s) {
     return s.replaceAll(' ', '_').replaceAll(':', '_').replaceAll('.', '_');
+}
+
+function deepMerge(target, source) {
+    for (const key in source) {
+        if (
+            source[key] &&
+            typeof source[key] === 'object' &&
+            !Array.isArray(source[key])
+        ) {
+            target[key] = deepMerge(target[key] || {}, source[key]);
+        } else {
+            target[key] = source[key];
+        }
+    }
+    return target;
 }

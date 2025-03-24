@@ -22,10 +22,10 @@ export default class Popup {
         this.actions = this.parent.querySelector('.actions');
     }
 
-    show({ x, y, task, target }) {
+    show({ x, y, target, ...data }) {
         this.actions.innerHTML = '';
         let html = this.popup_func({
-            task,
+            ...data,
             chart: this.gantt,
             get_title: () => this.title,
             set_title: (title) => (this.title.innerHTML = title),

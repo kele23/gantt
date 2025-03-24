@@ -1,3 +1,4 @@
+import color_utils from './color_utils';
 import date_utils from './date_utils';
 import { $, createSVG, animateSVG } from './svg_utils';
 
@@ -92,6 +93,7 @@ export default class Bar {
     draw() {
         this.draw_bar();
         this.draw_progress_bar();
+        this.draw_all_annotations();
         if (this.gantt.options.show_expected_progress) {
             this.prepare_expected_progress_values();
             this.draw_expected_progress_bar();
@@ -182,6 +184,88 @@ export default class Bar {
         animateSVG(this.$bar_progress, 'width', 0, this.progress_width);
     }
 
+    draw_all_annotations() {
+        if (!this.task.annotations) {
+            return;
+        }
+
+        for (let color in this.task.annotations) {
+            const annotations = this.task.annotations[color];
+            for (let index = 0; index < annotations.length; index++) {
+                const bar_annotation = this.draw_annotation(
+                    color,
+                    annotations[index],
+                );
+                this.setup_annotation_popup(annotations[index], bar_annotation);
+            }
+        }
+    }
+
+    draw_annotation(color, annotation) {
+        const x =
+            (date_utils.diff(
+                date_utils.parse(annotation.date),
+                this.gantt.gantt_start,
+                this.gantt.config.unit,
+            ) /
+                this.gantt.config.step) *
+            this.gantt.config.column_width;
+
+        const bar_annotation = createSVG('rect', {
+            x,
+            y: this.y,
+            width:
+                this.gantt.config.column_width /
+                date_utils.convert_scales(
+                    this.gantt.config.view_mode.step,
+                    'day',
+                ),
+            height: this.height,
+            rx: this.corner_radius + 2,
+            ry: this.corner_radius + 2,
+            class: 'bar-progress',
+            append_to: this.bar_group,
+        });
+        bar_annotation.style.fill = color;
+
+        return bar_annotation;
+    }
+
+    setup_annotation_popup(annotation, bar_annotation) {
+        let timeout;
+
+        $.on(bar_annotation, 'mouseenter', (e) => {
+            timeout = setTimeout(() => {
+                this.gantt.show_popup({
+                    x: e.clientX,
+                    y: e.clientY,
+                    type: 'annotation',
+                    // TODO: creating and passing a task object
+                    // from annotations since current popup implementation
+                    // depends entirely on tasks and now we have multiple
+                    // components like sidebar items or annotations.
+                    task: {
+                        name: annotation.name,
+                        _start: date_utils.parse(annotation.date),
+                        _end: date_utils.add(
+                            date_utils.parse(annotation.date),
+                            1,
+                            'day',
+                        ),
+                        actual_duration: 1,
+                        progress: this.task.progress,
+                    },
+                    target: bar_annotation,
+                });
+            }, 200);
+        });
+
+        $.on(bar_annotation, 'mouseleave', () => {
+            clearTimeout(timeout);
+            this.gantt.popup?.hide?.();
+        });
+    }
+
     calculate_progress_width() {
         const width = this.$bar.getWidth();
         const ignored_end = this.x + width;
@@ -220,13 +304,36 @@ export default class Bar {
             x_coord = this.x + this.image_size + 5;
         }
 
-        createSVG('text', {
+        let label = this.task.name;
+        if (typeof this.gantt.options.bar_config.get_label === 'function') {
+            const task_group = this.gantt.get_task_group_for_task(this.task);
+            label = this.gantt.options.bar_config.get_label({
+                task: this.task,
+                task_group,
+            });
+        }
+
+        const labelEl = createSVG('text', {
             x: x_coord,
             y: this.y + this.height / 2,
-            innerHTML: this.task.name,
+            innerHTML: label,
             class: 'bar-label',
             append_to: this.bar_group,
         });
+
+        if (this.task.color) {
+            try {
+                labelEl.style.fill = color_utils.getTextColorForBackground(
+                    this.task.color,
+                );
+            } catch (err) {
+                // do not fail if the text color was invalid
+                // maybe the passed was a name like 'red'
+                // and this feature only supports HEX, HSL and RGB
+                console.warn(err);
+            }
+        }
+
         // labels get BBox in the next tick
         requestAnimationFrame(() => this.update_label_position());
     }
@@ -349,9 +456,11 @@ export default class Bar {
                     if (this.gantt.bar_being_dragged) return;
                 }
                 this.gantt.show_popup({
-                    x: e.offsetX || e.layerX,
-                    y: e.offsetY || e.layerY,
+                    x: e.clientX,
+                    y: e.clientY,
+                    type: 'task',
                     task: this.task,
+                    task_group: this.gantt.get_task_group_for_task(this.task),
                     target: this.$bar,
                 });
             });
@@ -361,9 +470,13 @@ export default class Bar {
             timeout = setTimeout(() => {
                 if (this.gantt.options.popup_on === 'hover')
                     this.gantt.show_popup({
-                        x: e.offsetX || e.layerX,
-                        y: e.offsetY || e.layerY,
+                        x: e.clientX,
+                        y: e.clientY,
+                        type: 'task',
                         task: this.task,
+                        task_group: this.gantt.get_task_group_for_task(
+                            this.task,
+                        ),
                         target: this.$bar,
                     });
                 this.gantt.$container
@@ -381,6 +494,15 @@ export default class Bar {
         });
 
         $.on(this.group, 'click', () => {
+            if (this.gantt.options.bar_config.on_click) {
+                const task_group = this.gantt.get_task_group_for_task(
+                    this.task,
+                );
+                this.gantt.options.bar_config.on_click({
+                    task: this.task,
+                    task_group,
+                });
+            }
             this.gantt.trigger_event('click', [this.task]);
         });
 
@@ -578,7 +700,10 @@ export default class Bar {
             date_utils.diff(task_start, gantt_start, this.gantt.config.unit) /
             this.gantt.config.step;
 
-        let x = diff * column_width;
+        // TODO: so far, 4 pixels need to be substracted
+        // from the x position to match properly in the UI.
+        // Is there a way to improve this?
+        let x = diff * column_width + 4;
 
         /* Since the column width is based on 30,
         we count the month-difference, multiply it by 30 for a "pseudo-month"
@@ -616,7 +741,10 @@ export default class Bar {
             duration_in_days = 0;
         for (
             let d = new Date(this.task._start);
-            d < this.task._end;
+            // Possible hack: last update changed comparison from '<' to '<=
+            // This in order to make tasks to take final day as well.
+            // Even this is good to tasks that lasts one day only
+            d <= this.task._end;
             d.setDate(d.getDate() + 1)
         ) {
             duration_in_days++;
@@ -689,13 +817,17 @@ export default class Bar {
         const labelWidth = label.getBBox().width;
         const barWidth = bar.getWidth();
         if (labelWidth > barWidth) {
-            label.classList.add('big');
-            if (img) {
-                img.setAttribute('x', bar.getEndX() + padding);
-                img_mask.setAttribute('x', bar.getEndX() + padding);
-                label.setAttribute('x', bar.getEndX() + x_offset_label_img);
+            if (this.gantt.options.bar_config.show_label_on_offset) {
+                label.classList.add('big');
+                if (img) {
+                    img.setAttribute('x', bar.getEndX() + padding);
+                    img_mask.setAttribute('x', bar.getEndX() + padding);
+                    label.setAttribute('x', bar.getEndX() + x_offset_label_img);
+                } else {
+                    label.setAttribute('x', bar.getEndX() + padding);
+                }
             } else {
-                label.setAttribute('x', bar.getEndX() + padding);
+                label.style.display = 'none';
             }
         } else {
             label.classList.remove('big');
