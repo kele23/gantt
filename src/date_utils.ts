@@ -1,3 +1,6 @@
+import { DateScale } from './types';
+import { padStart } from './utils';
+
 const YEAR = 'year';
 const MONTH = 'month';
 const DAY = 'day';
@@ -7,28 +10,30 @@ const SECOND = 'second';
 const MILLISECOND = 'millisecond';
 
 export default {
-    parse_duration(duration) {
+    parse_duration(duration: string): { duration: number; scale: DateScale } {
         const regex = /([0-9]+)(y|m|d|h|min|s|ms)/gm;
         const matches = regex.exec(duration);
-        if (matches !== null) {
-            if (matches[2] === 'y') {
-                return { duration: parseInt(matches[1]), scale: `year` };
-            } else if (matches[2] === 'm') {
-                return { duration: parseInt(matches[1]), scale: `month` };
-            } else if (matches[2] === 'd') {
-                return { duration: parseInt(matches[1]), scale: `day` };
-            } else if (matches[2] === 'h') {
-                return { duration: parseInt(matches[1]), scale: `hour` };
-            } else if (matches[2] === 'min') {
-                return { duration: parseInt(matches[1]), scale: `minute` };
-            } else if (matches[2] === 's') {
-                return { duration: parseInt(matches[1]), scale: `second` };
-            } else if (matches[2] === 'ms') {
-                return { duration: parseInt(matches[1]), scale: `millisecond` };
-            }
+        if (!matches) throw new Error('Invalid duration');
+
+        if (matches[2] === 'y') {
+            return { duration: parseInt(matches[1]), scale: `year` };
+        } else if (matches[2] === 'm') {
+            return { duration: parseInt(matches[1]), scale: `month` };
+        } else if (matches[2] === 'd') {
+            return { duration: parseInt(matches[1]), scale: `day` };
+        } else if (matches[2] === 'h') {
+            return { duration: parseInt(matches[1]), scale: `hour` };
+        } else if (matches[2] === 'min') {
+            return { duration: parseInt(matches[1]), scale: `minute` };
+        } else if (matches[2] === 's') {
+            return { duration: parseInt(matches[1]), scale: `second` };
+        } else if (matches[2] === 'ms') {
+            return { duration: parseInt(matches[1]), scale: `millisecond` };
+        } else {
+            throw new Error('Invalid duration');
         }
     },
-    parse(date, date_separator = '-', time_separator = /[.:]/) {
+    parse(date: string | Date, date_separator = '-', time_separator = /[.:]/) {
         if (date instanceof Date) {
             return date;
         }
@@ -48,15 +53,16 @@ export default {
             if (time_parts && time_parts.length) {
                 if (time_parts.length === 4) {
                     time_parts[3] = '0.' + time_parts[3];
-                    time_parts[3] = parseFloat(time_parts[3]) * 1000;
+                    time_parts[3] = '' + parseFloat(time_parts[3]) * 1000;
                 }
-                vals = vals.concat(time_parts);
+                vals = vals.concat(time_parts.map((item) => Number(item)));
             }
+            //@ts-ignore: it works
             return new Date(...vals);
         }
     },
 
-    to_string(date, with_time = false) {
+    to_string(date: Date, with_time = false) {
         if (!(date instanceof Date)) {
             throw new TypeError('Invalid argument type');
         }
@@ -78,7 +84,7 @@ export default {
         return date_string + (with_time ? ' ' + time_string : '');
     },
 
-    format(date, date_format = 'YYYY-MM-DD HH:mm:ss.SSS', lang = 'en') {
+    format(date: Date, date_format = 'YYYY-MM-DD HH:mm:ss.SSS', lang = 'en') {
         const dateTimeFormat = new Intl.DateTimeFormat(lang, {
             month: 'long',
         });
@@ -89,10 +95,12 @@ export default {
         const month_name_capitalized =
             month_name.charAt(0).toUpperCase() + month_name.slice(1);
 
-        const values = this.get_date_values(date).map((d) => padStart(d, 2, 0));
+        const values = this.get_date_values(date).map((d) =>
+            padStart(`${d}`, 2, `0`),
+        );
         const format_map = {
             YYYY: values[0],
-            MM: padStart(+values[1] + 1, 2, 0),
+            MM: padStart(`${values[1] + 1}`, 2, `0`),
             DD: values[2],
             HH: values[3],
             mm: values[4],
@@ -104,13 +112,14 @@ export default {
         };
 
         let str = date_format;
-        const formatted_values = [];
+        const formatted_values: string[] = [];
 
         Object.keys(format_map)
             .sort((a, b) => b.length - a.length) // big string first
             .forEach((key) => {
                 if (str.includes(key)) {
                     str = str.replaceAll(key, `$${formatted_values.length}`);
+                    //@ts-ignore: ignore
                     formatted_values.push(format_map[key]);
                 }
             });
@@ -122,12 +131,12 @@ export default {
         return str;
     },
 
-    diff(date_a, date_b, scale = 'day') {
-        let milliseconds, seconds, hours, minutes, days, months, years;
+    diff(date_a: Date, date_b: Date, scale: DateScale = 'day') {
+        let milliseconds, seconds: number, hours, minutes, days, months, years;
 
         milliseconds =
-            date_a -
-            date_b +
+            date_a.getTime() -
+            date_b.getTime() +
             (date_b.getTimezoneOffset() - date_a.getTimezoneOffset()) * 60000;
         seconds = milliseconds / 1000;
         minutes = seconds / 60;
@@ -151,20 +160,16 @@ export default {
         // Calculate years based on actual months
         years = months / 12;
 
-        if (!scale.endsWith('s')) {
-            scale += 's';
-        }
-
         return (
             Math.round(
                 {
-                    milliseconds,
-                    seconds,
-                    minutes,
-                    hours,
-                    days,
-                    months,
-                    years,
+                    millisecond: milliseconds,
+                    second: seconds,
+                    minute: minutes,
+                    hour: hours,
+                    day: days,
+                    month: months,
+                    year: years,
                 }[scale] * 100,
             ) / 100
         );
@@ -172,6 +177,7 @@ export default {
 
     today() {
         const vals = this.get_date_values(new Date()).slice(0, 3);
+        //@ts-ignore: it works
         return new Date(...vals);
     },
 
@@ -179,8 +185,7 @@ export default {
         return new Date();
     },
 
-    add(date, qty, scale) {
-        qty = parseInt(qty, 10);
+    add(date: Date, qty: number, scale: DateScale) {
         const vals = [
             date.getFullYear() + (scale === YEAR ? qty : 0),
             date.getMonth() + (scale === MONTH ? qty : 0),
@@ -190,10 +195,11 @@ export default {
             date.getSeconds() + (scale === SECOND ? qty : 0),
             date.getMilliseconds() + (scale === MILLISECOND ? qty : 0),
         ];
+        //@ts-ignore: it works
         return new Date(...vals);
     },
 
-    start_of(date, scale) {
+    start_of(date: Date, scale: DateScale) {
         const scores = {
             [YEAR]: 6,
             [MONTH]: 5,
@@ -204,7 +210,7 @@ export default {
             [MILLISECOND]: 0,
         };
 
-        function should_reset(_scale) {
+        function should_reset(_scale: DateScale) {
             const max_score = scores[scale];
             return scores[_scale] <= max_score;
         }
@@ -218,15 +224,16 @@ export default {
             should_reset(MINUTE) ? 0 : date.getSeconds(),
             should_reset(SECOND) ? 0 : date.getMilliseconds(),
         ];
-
+        //@ts-ignore: it works
         return new Date(...vals);
     },
 
-    clone(date) {
+    clone(date: Date) {
+        //@ts-ignore: it works
         return new Date(...this.get_date_values(date));
     },
 
-    get_date_values(date) {
+    get_date_values(date: Date) {
         return [
             date.getFullYear(),
             date.getMonth(),
@@ -238,7 +245,7 @@ export default {
         ];
     },
 
-    convert_scales(period, to_scale) {
+    convert_scales(period: string, to_scale: DateScale) {
         const TO_DAYS = {
             millisecond: 1 / 60 / 60 / 24 / 1000,
             second: 1 / 60 / 60 / 24,
@@ -253,7 +260,7 @@ export default {
         return in_days / TO_DAYS[to_scale];
     },
 
-    get_days_in_month(date) {
+    get_days_in_month(date: Date) {
         const no_of_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
         const month = date.getMonth();
@@ -270,23 +277,7 @@ export default {
         return 28;
     },
 
-    get_days_in_year(date) {
+    get_days_in_year(date: Date) {
         return date.getFullYear() % 4 ? 365 : 366;
     },
 };
-
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
-function padStart(str, targetLength, padString) {
-    str = str + '';
-    targetLength = targetLength >> 0;
-    padString = String(typeof padString !== 'undefined' ? padString : ' ');
-    if (str.length > targetLength) {
-        return String(str);
-    } else {
-        targetLength = targetLength - str.length;
-        if (targetLength > padString.length) {
-            padString += padString.repeat(targetLength / padString.length);
-        }
-        return padString.slice(0, targetLength) + String(str);
-    }
-}

@@ -55,5 +55,8 @@
     ],
     "sideEffects": [
         "*.css"
-    ]
+    ],
+    "dependencies": {
+        "eventemitter3": "^5.0.1"
+    }
 }

@@ -1,4 +1,4 @@
-function parseColorToRGB(color) {
+function parseColorToRGB(color: string) {
     color = color.trim();
 
     // HEX (#RRGGBB or #RGB)
@@ -37,7 +37,7 @@ function parseColorToRGB(color) {
 
         // Convert HSL to RGB
         const a = s * Math.min(l, 1 - l);
-        const f = (n) => {
+        const f = (n: number) => {
             const k = (n + h / 30) % 12;
             return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
         };
@@ -53,7 +53,7 @@ function parseColorToRGB(color) {
 }
 
 export default {
-    getTextColorForBackground(color) {
+    getTextColorForBackground(color: string) {
         // Convert any color format to RGB
         const rgb = parseColorToRGB(color);
         if (!rgb) {
