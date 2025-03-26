@@ -1,6 +1,6 @@
-import Gantt from '.';
+import { Gantt } from '.';
+import Bar from './bar';
 import { createSVG } from './svg_utils';
-import { Bar } from './types';
 
 export default class Arrow {
     private _gantt: Gantt;
@@ -20,11 +20,11 @@ export default class Arrow {
 
     calculate_path() {
         let start_x =
-            this._from_task.$bar.getX() + this._from_task.$bar.getWidth() / 2;
+            this._from_task.bar.getX() + this._from_task.bar.getWidth() / 2;
 
         const condition = () =>
-            this._to_task.$bar.getX() < start_x + this._gantt.options.padding &&
-            start_x > this._from_task.$bar.getX() + this._gantt.options.padding;
+            this._to_task.bar.getX() < start_x + this._gantt.options.padding! &&
+            start_x > this._from_task.bar.getX() + this._gantt.options.padding!;
 
         while (condition()) {
             start_x -= 10;
@@ -38,7 +38,7 @@ export default class Arrow {
                 this._from_task.task._index +
             this._gantt.options.padding! / 2;
 
-        let end_x = this._to_task.$bar.getX() - 13;
+        let end_x = this._to_task.bar.getX() - 13;
         let end_y =
             this._gantt.config.header_height +
             this._gantt.options.bar_height! / 2 +
@@ -54,8 +54,8 @@ export default class Arrow {
         let curve_y = from_is_below_to ? -curve : curve;
 
         if (
-            this._to_task.$bar.getX() <=
-            this._from_task.$bar.getX() + this._gantt.options.padding
+            this._to_task.bar.getX() <=
+            this._from_task.bar.getX() + this._gantt.options.padding!
         ) {
             let down_1 = this._gantt.options.padding! / 2 - curve;
             if (down_1 < 0) {
@@ -64,11 +64,11 @@ export default class Arrow {
                 curve_y = from_is_below_to ? -curve : curve;
             }
             const down_2 =
-                this._to_task.$bar.getY() +
-                this._to_task.$bar.getHeight() / 2 -
+                this._to_task.bar.getY() +
+                this._to_task.bar.getHeight() / 2 -
                 curve_y;
             const left =
-                this._to_task.$bar.getX() - this._gantt.options.padding!;
+                this._to_task.bar.getX() - this._gantt.options.padding!;
             this._path = `
                 M ${start_x} ${start_y}
                 v ${down_1}

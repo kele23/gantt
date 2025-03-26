@@ -1,4 +1,4 @@
-import Gantt from '.';
+import { Gantt } from '.';
 import Arrow from './arrow';
 import color_utils from './color_utils';
 import date_utils from './date_utils';
@@ -90,7 +90,7 @@ export default class Bar {
         }
 
         // bind click event
-        this._$bar.addEventListener('click', (e) => {
+        this._$bar.addEventListener('click', () => {
             this._gantt.emit('task-click', { task: this._task });
         });
     }
@@ -392,5 +392,9 @@ export default class Bar {
 
     get arrows() {
         return this._arrows;
+    }
+
+    get bar() {
+        return this._$bar;
     }
 }

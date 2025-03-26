@@ -1,7 +1,6 @@
-import { gettext } from './i18n';
 import date_utils from './date_utils';
+import { Options, ViewModeDef } from './types';
 import { formatWeek, getDecade } from './utils';
-import { Options, Task, ViewModeDef } from './types';
 
 const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
     hour: {
@@ -30,7 +29,7 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
     },
     hday: {
         name: 'Half Day',
-        padding: '14d',
+        padding: '7d',
         step: '12h',
         date_format: 'YYYY-MM-DD HH:',
         lower_text: 'HH',
@@ -59,10 +58,10 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
     },
     week: {
         name: 'Week',
-        padding: '1m',
+        padding: '14d',
         step: '7d',
         date_format: 'YYYY-MM-DD',
-        column_width: 140,
+        column_width: 200,
         lower_text: formatWeek,
         upper_text: (d, ld, lang) =>
             !ld || d.getMonth() !== ld.getMonth()
@@ -73,9 +72,9 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
     },
     month: {
         name: 'Month',
-        padding: '2m',
+        padding: '14d',
         step: '1m',
-        column_width: 120,
+        column_width: 350,
         date_format: 'YYYY-MM',
         lower_text: 'MMMM',
         upper_text: (d, ld, lang) =>
@@ -87,9 +86,9 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
     },
     year: {
         name: 'Year',
-        padding: '2y',
+        padding: '1y',
         step: '1y',
-        column_width: 120,
+        column_width: 600,
         date_format: 'YYYY',
         upper_text: (d, ld, _lang) =>
             !ld || getDecade(d) !== getDecade(ld) ? getDecade(d) : '',
@@ -111,24 +110,17 @@ const DEFAULT_OPTIONS: Options = {
     column_width: undefined,
     date_format: 'YYYY-MM-DD HH:mm',
     enable_left_sidebar_list: false,
+    sidebar_width: 200,
     holidays: { 'var(--g-weekend-highlight-color)': 'weekend' },
     ignore: [],
     infinite_padding: false,
     language: 'en',
-    left_sidebar_list_config: {
-        width: 200,
-    },
     end_date: undefined,
     start_date: undefined,
     lines: 'both',
     lower_header_height: 30,
     move_dependencies: true,
     padding: 18,
-    popup: (task: Task) => {
-        return 'ciao';
-    },
-    readonly: false,
-    readonly_dates: false,
     scroll_to: 'today',
     show_expected_progress: false,
     snap_at: undefined,

@@ -1,6 +1,6 @@
 {
     "name": "@kele23/gantt",
-    "version": "0.0.1",
+    "version": "0.0.3",
     "description": "A simple, modern, interactive gantt library for the web based on Frappe Gantt",
     "main": "src/index.js",
     "type": "module",
@@ -23,11 +23,13 @@
     ],
     "exports": {
         ".": {
-            "require": "./dist/frappe-gantt.umd.js",
-            "import": "./dist/frappe-gantt.es.js",
-            "style": "./dist/frappe-gantt.css"
+            "require": "./dist/gantt.umd.js",
+            "import": "./dist/gantt.es.js",
+            "style": "./dist/gantt.css",
+            "types": "./dist/gantt.d.ts"
         }
     },
+    "types": "./dist/gantt.d.ts",
     "keywords": [
         "gantt",
         "svg",
@@ -48,7 +50,8 @@
         "eslint-plugin-prettier": "^2.6.0",
         "postcss-nesting": "^12.1.2",
         "prettier": "3.2.5",
-        "vite": "^5.2.10"
+        "vite": "^5.2.10",
+        "vite-plugin-dts": "^4.5.3"
     },
     "eslintIgnore": [
         "dist"

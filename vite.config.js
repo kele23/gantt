@@ -1,21 +1,26 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
+import dts from 'vite-plugin-dts';
 
 export default defineConfig({
+    plugins: [
+        dts({
+            rollupTypes: true,
+        }),
+    ],
     build: {
         lib: {
-            entry: resolve(__dirname, 'src/index.js'),
+            entry: resolve(__dirname, 'src/index.ts'),
             name: 'Gantt',
-            fileName: 'frappe-gantt',
+            fileName: 'gantt',
         },
         rollupOptions: {
             output: {
-                format: 'cjs',
-                assetFileNames: 'frappe-gantt[extname]',
-                entryFileNames: 'frappe-gantt.[format].js'
+                format: ['es', 'umd'],
+                assetFileNames: 'gantt[extname]',
+                entryFileNames: 'gantt.[format].js',
             },
         },
     },
     output: { interop: 'auto' },
-    server: { watch: { include: ['dist/*', 'src/*'] } }
 });

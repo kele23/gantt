@@ -1,3 +1,15 @@
+import Bar from './bar';
+
+declare global {
+    interface SVGElement {
+        getX(): number;
+        getY(): number;
+        getEndX(): number;
+        getHeight(): number;
+        getWidth(): number;
+    }
+}
+
 export type BarConfig = {
     show_label_on_offset: boolean;
     get_label?: ({
@@ -36,17 +48,18 @@ export type ViewModeDef = {
     snap_at?: string;
 };
 
-export type Options = Record<string, any> & {
+export type Options = {
     arrow_curve?: number;
     auto_move_label?: boolean;
     bar_corner_radius?: number;
     bar_height?: number;
     bar_config?: BarConfig;
     base_z_index?: number;
-    container_height?: 'auto' | number;
+    container_height?: string | number;
     column_width?: number;
     date_format?: string;
     enable_left_sidebar_list?: boolean;
+    sidebar_width?: number;
     holidays?: HolidaysConfig;
     ignore?: IgnoreConfig;
     infinite_padding?: boolean;
@@ -57,9 +70,6 @@ export type Options = Record<string, any> & {
     lower_header_height?: number;
     move_dependencies?: boolean;
     padding?: number;
-    popup?: (taks: Task) => string | HTMLElement;
-    readonly?: boolean;
-    readonly_dates?: boolean;
     scroll_to?: 'start' | 'end' | 'today';
     show_expected_progress?: boolean;
     snap_at?: string;
@@ -70,6 +80,7 @@ export type Options = Record<string, any> & {
     view_mode_select?: boolean;
     view_modes?: string[];
     view_modes_def?: Record<string, ViewModeDef>;
+    locales?: Record<string, Locale>;
 };
 
 export type Locale = Record<string, string>;
@@ -100,8 +111,6 @@ export type InternalTask = Task & {
     actual_duration?: number;
 };
 
-export type Bar = any;
-
 export type TaskGroup = {
     id: string;
     name: string;
@@ -127,6 +136,7 @@ export type GanttConfig = {
     unit: DateScale;
     step: number;
     view_mode: ViewModeDef;
+    view_mode_name: string;
 };
 
 export type DateScale =
@@ -137,13 +147,3 @@ export type DateScale =
     | 'minute'
     | 'second'
     | 'millisecond';
-
-declare global {
-    interface SVGElement {
-        getX(): number;
-        getY(): number;
-        getEndX(): number;
-        getHeight(): number;
-        getWidth(): number;
-    }
-}

@@ -20,7 +20,7 @@ import { deepMerge, generate_id, sanitize } from './utils';
 import Bar from './bar';
 import EventEmitter from 'eventemitter3';
 
-export default class Gantt extends EventEmitter {
+class Gantt extends EventEmitter {
     private _options: Options;
     private _$main_wrapper: HTMLElement;
     private _$svg: SVGGraphicsElement;
@@ -30,8 +30,7 @@ export default class Gantt extends EventEmitter {
     private _original_options: Options;
     private _tasks: InternalTask[];
     private _dependency_map: Record<string, string[]>;
-    private _$left_sidebar_list_container: HTMLElement;
-    private _$left_sidebar_list_fixer_container: HTMLElement;
+    private _$sidebar: SVGGElement;
     private _config: GanttConfig;
     private _gantt_start: Date;
     private _gantt_end: Date;
@@ -48,7 +47,6 @@ export default class Gantt extends EventEmitter {
     private _$header: HTMLElement;
     private _$upper_header: HTMLElement;
     private _$lower_header: HTMLElement;
-    private _$current_highlight: HTMLElement;
     private bars: Bar[];
     private current_date: Date;
     private $current: HTMLElement;
@@ -62,6 +60,8 @@ export default class Gantt extends EventEmitter {
         task_groups: TaskGroup[] = [],
     ) {
         super();
+        //@ts-ignore: After is initialized
+        this._config = {};
         this.setup_wrapper(wrapper);
         this.setup_options(options);
         if (this._options.locales) {
@@ -140,25 +140,18 @@ export default class Gantt extends EventEmitter {
         const default_copy = { ...DEFAULT_OPTIONS };
         this._options = deepMerge(default_copy, options);
         const CSS_VARIABLES: Record<string, string> = {
-            'grid-height': 'container_height',
             'bar-height': 'bar_height',
             'lower-header-height': 'lower_header_height',
             'upper-header-height': 'upper_header_height',
         };
         for (let name in CSS_VARIABLES) {
+            //@ts-ignore: i know
             let setting = this._options[CSS_VARIABLES[name]];
             if (setting !== 'auto')
                 this._$main_wrapper.style.setProperty(
                     '--gv-' + name,
                     setting + 'px',
                 );
-        }
-
-        if (
-            !this._options.scroll_to &&
-            this._options.enable_left_sidebar_list
-        ) {
-            this._options.scroll_to = 'start';
         }
     }
 
@@ -168,7 +161,7 @@ export default class Gantt extends EventEmitter {
      */
     update_options(options: Options) {
         this.setup_options({ ...this._original_options, ...options });
-        this.change_view_mode(undefined, true);
+        this.change_view_mode();
     }
 
     /**
@@ -331,14 +324,10 @@ export default class Gantt extends EventEmitter {
         }
     }
 
-    refresh(
-        tasks: Task[],
-        task_groups: TaskGroup[] = [],
-        reset_scroll = false,
-    ) {
+    refresh(tasks: Task[], task_groups: TaskGroup[] = []) {
         this.setup_task_groups(task_groups);
         this.setup_tasks(tasks);
-        this.change_view_mode(undefined, !reset_scroll);
+        this.change_view_mode();
     }
 
     update_task(id: string, new_details: InternalTask) {
@@ -350,28 +339,16 @@ export default class Gantt extends EventEmitter {
         bar.refresh();
     }
 
-    change_view_mode(
-        modeName = this._options.view_mode!,
-        maintain_pos = false,
-    ) {
+    change_view_mode(modeName = this._options.view_mode!) {
         const mode = this._options.view_modes_def![modeName];
-        let old_pos, old_scroll_op;
-        if (maintain_pos) {
-            old_pos = this._$container.scrollLeft;
-            old_scroll_op = this._options.scroll_to;
-            this._options.scroll_to = undefined;
-        }
-        this._options.view_mode = mode.name;
-        //@ts-ignore: changed after
-        this._config = {};
-        this._config.view_mode = mode;
+        if (!mode) throw new Error('Invalid view mode');
+
+        this.config.view_mode_name = modeName;
+        this.config.view_mode = mode;
+
         this.update_view_scale(mode);
-        this.setup_dates(maintain_pos);
+        this.setup_dates();
         this.render();
-        if (maintain_pos) {
-            this._$container.scrollLeft = old_pos!;
-            this._options.scroll_to = old_scroll_op;
-        }
 
         this.emit('view-change', { mode });
     }
@@ -392,12 +369,12 @@ export default class Gantt extends EventEmitter {
             10;
     }
 
-    setup_dates(refresh = false) {
-        this.setup_gantt_dates(refresh);
+    setup_dates() {
+        this.setup_gantt_dates();
         this.setup_date_values();
     }
 
-    setup_gantt_dates(refresh: boolean) {
+    setup_gantt_dates() {
         let gantt_start, gantt_end;
         if (!this._tasks.length) {
             gantt_start = new Date();
@@ -420,22 +397,21 @@ export default class Gantt extends EventEmitter {
         gantt_start = date_utils.start_of(gantt_start!, this._config.unit);
         gantt_end = date_utils.start_of(gantt_end!, this._config.unit);
 
-        if (!refresh) {
-            let [padding_start, padding_end] = [
-                date_utils.parse_duration(this._config.view_mode.padding),
-                date_utils.parse_duration(this._config.view_mode.padding),
-            ];
-            this._gantt_start = date_utils.add(
-                gantt_start,
-                -padding_start.duration,
-                padding_start.scale,
-            );
-            this._gantt_end = date_utils.add(
-                gantt_end,
-                padding_end.duration,
-                padding_end.scale,
-            );
-        }
+        let [padding_start, padding_end] = [
+            date_utils.parse_duration(this._config.view_mode.padding),
+            date_utils.parse_duration(this._config.view_mode.padding),
+        ];
+        this._gantt_start = date_utils.add(
+            gantt_start,
+            -padding_start.duration,
+            padding_start.scale,
+        );
+        this._gantt_end = date_utils.add(
+            gantt_end,
+            padding_end.duration,
+            padding_end.scale,
+        );
+
         this._config.date_format = this._config.view_mode.date_format;
         this._gantt_start.setHours(0, 0, 0, 0);
     }
@@ -522,7 +498,7 @@ export default class Gantt extends EventEmitter {
                 this._$adjust.classList.remove('hide');
                 this._$adjust.onclick = () => {
                     this._$container.scrollTo({
-                        left: max_start,
+                        left: max_start - 100,
                         behavior: 'smooth',
                     });
                 };
@@ -534,7 +510,7 @@ export default class Gantt extends EventEmitter {
                 this._$adjust.classList.remove('hide');
                 this._$adjust.onclick = () => {
                     this._$container.scrollTo({
-                        left: min_start,
+                        left: min_start + 100,
                         behavior: 'smooth',
                     });
                 };
@@ -553,6 +529,11 @@ export default class Gantt extends EventEmitter {
                     });
                 }
             }
+
+            this._$sidebar.setAttribute(
+                'transform',
+                `translate(${target.scrollLeft},0)`,
+            );
         });
     }
 
@@ -606,7 +587,6 @@ export default class Gantt extends EventEmitter {
         this.make_grid_background();
         this.make_grid_rows();
         this.make_grid_header();
-        this.make_left_sidebar_list();
         this.make_side_header();
     }
 
@@ -621,16 +601,24 @@ export default class Gantt extends EventEmitter {
         const sidebar_list_items = this._options.task_groups_enabled
             ? this._task_groups
             : this._tasks;
+
+        // set container height
+        if (typeof this._options.container_height! != 'string')
+            this._$container.style.height =
+                this._options.container_height! + 'px';
+        else this._$container.style.height = this._options.container_height!;
+
+        const realContainerHeight = this._$container.clientHeight - 20;
+
         const grid_height = Math.max(
             this._config.header_height +
                 this._options.padding! +
                 (this._options.bar_height! + this._options.padding!) *
                     sidebar_list_items.length -
                 10,
-            this._options.container_height! !== 'auto'
-                ? this._options.container_height!
-                : 0,
+            realContainerHeight,
         );
+        this._grid_height = grid_height;
 
         createSVG('rect', {
             x: 0,
@@ -645,9 +633,6 @@ export default class Gantt extends EventEmitter {
             height: grid_height,
             width: '100%',
         });
-        this._grid_height = grid_height;
-        if (this._options.container_height === 'auto')
-            this._$container.style.height = grid_height + 20 + 'px';
     }
 
     make_grid_rows() {
@@ -678,7 +663,6 @@ export default class Gantt extends EventEmitter {
             classes: 'grid-header',
             append_to: this._$container,
         });
-        this._$header.style.zIndex = '' + this._options.base_z_index + 1;
 
         this._$upper_header = this.create_el({
             classes: 'upper-header',
@@ -690,27 +674,8 @@ export default class Gantt extends EventEmitter {
         });
     }
 
-    make_left_sidebar_list() {
-        if (!this._options.enable_left_sidebar_list) {
-            return;
-        }
-
-        this._$left_sidebar_list_fixer_container = this.create_el({
-            classes: 'left-sidebar-list-fixer',
-            prepend_to: this._$main_wrapper,
-        });
-
-        this._$left_sidebar_list_container = this.create_el({
-            classes: 'left-sidebar-list',
-            append_to: this._$main_wrapper,
-        });
-        this._$left_sidebar_list_container.style.zIndex =
-            '' + this._options.base_z_index + 2;
-    }
-
     make_side_header() {
         this._$side_header = this.create_el({ classes: 'side-header' });
-        this._$side_header.style.zIndex = '' + this._options.base_z_index + 1;
         this._$upper_header.prepend(this._$side_header);
 
         // Create view mode change select
@@ -734,13 +699,13 @@ export default class Gantt extends EventEmitter {
                     mode.name,
                     this._options.language!,
                 );
-                if (mode.name === this._config.view_mode.name)
+                if (mode.name === this._config.view_mode_name)
                     $option.selected = true;
                 $select.appendChild($option);
             }
 
             $select.addEventListener('change', () => {
-                this.change_view_mode($select.value, true);
+                this.change_view_mode($select.value);
             });
             this._$side_header.appendChild($select);
         }
@@ -915,20 +880,13 @@ export default class Gantt extends EventEmitter {
         const left =
             (diff_in_units / this.config.step) * this.config.column_width;
 
-        this._$current_highlight = this.create_el({
-            top: this.config.header_height,
-            left,
-            height: this._grid_height - this.config.header_height,
-            classes: 'current-highlight',
-            append_to: this._$container,
-        });
-        this.create_el({
-            top: this.config.header_height - 6,
-            left: left - 2.5,
-            width: 6,
-            height: 6,
-            classes: 'current-ball-highlight',
-            append_to: this._$header,
+        createSVG('rect', {
+            y: 0,
+            x: left,
+            height: '100%',
+            width: 1,
+            append_to: this._$svg,
+            fill: '#000000',
         });
     }
 
@@ -966,7 +924,7 @@ export default class Gantt extends EventEmitter {
     }
 
     make_dates() {
-        this.get_dates_to_draw().forEach((date, i) => {
+        this.get_dates_to_draw().forEach((date) => {
             if (date.lower_text) {
                 let $lower_text = this.create_el({
                     left: date.x,
@@ -994,7 +952,7 @@ export default class Gantt extends EventEmitter {
 
     get_dates_to_draw() {
         let last_date_info: DateInfo | undefined = undefined;
-        const dates = this._dates.map((date, i) => {
+        const dates = this._dates.map((date) => {
             const d = this.get_date_info(date, last_date_info);
             last_date_info = d;
             return d;
@@ -1059,34 +1017,59 @@ export default class Gantt extends EventEmitter {
             return;
         }
 
+        // make sidebar
+        this._$sidebar = createSVG('g', {
+            class: 'gantt-sidebar',
+            append_to: this._$svg,
+        });
+
+        const width = this._options.sidebar_width!;
+        const height = this._options.bar_height! + this._options.padding!;
+
+        // full sidebar rect
+        createSVG('rect', {
+            x: 0,
+            y: 0,
+            width: width,
+            height: '100%',
+            append_to: this._$sidebar,
+            class: 'gantt-sidebar-bg',
+        });
+
+        // make rows
         const sidebar_list_items = this._options.task_groups_enabled
             ? this._task_groups
             : this._tasks;
 
         sidebar_list_items.forEach((item, index) => {
-            const row = this.create_el({
-                classes: 'left-sidebar-list-row',
-                append_to: this._$left_sidebar_list_container,
+            const y = this._config.header_height + index * height;
+
+            createSVG('rect', {
+                x: 0,
+                y: y,
+                width: width,
+                height: height,
+                append_to: this._$sidebar,
+                class: 'gantt-sidebar-row',
             });
-            row.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    ${item.thumbnail ? `<img class="left-sidebar-list-img" src="${item.thumbnail}" alt="${item.name}"/> ` : ''}
-                    <span>${item.name}</span>
-                </div>
-            `;
 
-            row.style.height =
-                this._options.bar_height! + this._options.padding! + 'px';
+            createSVG('text', {
+                x: 20,
+                y: y + height / 2,
+                innerHTML: item.name,
+                class: 'gantt-sidebar-label',
+                append_to: this._$sidebar,
+            });
+
+            createSVG('line', {
+                x1: 0,
+                y1: y + height,
+                x2: width,
+                y2: y + height,
+                class: 'gantt-sidebar-line',
+                append_to: this._$sidebar,
+            });
         });
-
-        // add empty row for cover little empty row from grid
-        const emptyRow = this.create_el({
-            classes: 'left-sidebar-list-row',
-            append_to: this._$left_sidebar_list_container,
-        });
-
-        // adding -1 to remove unnecessary scroll
-        emptyRow.style.height = -1 + this._options.padding! / 2 + 'px';
     }
 
     make_bars() {
@@ -1261,7 +1244,8 @@ export default class Gantt extends EventEmitter {
         let min_start = x;
         let max_start = x;
         let max_end = x + width;
-        Array.prototype.forEach.call(this.bars, function ({ group }, i) {
+
+        this.bars.forEach(({ group }) => {
             let { x, width } = group.getBBox();
             if (x < min_start) min_start = x;
             if (x > max_start) max_start = x;
@@ -1287,7 +1271,7 @@ export default class Gantt extends EventEmitter {
     }
 
     view_is(mode: string) {
-        return this._config.view_mode.name === mode;
+        return this._config.view_mode_name === mode;
     }
 
     get_task(id: string) {
@@ -1317,10 +1301,7 @@ export default class Gantt extends EventEmitter {
         this._$svg.innerHTML = '';
         this._$header?.remove?.();
         this._$side_header?.remove?.();
-        this._$current_highlight?.remove?.();
         this._$extras?.remove?.();
-        this._$left_sidebar_list_fixer_container?.remove?.();
-        this._$left_sidebar_list_container?.remove?.();
     }
 
     get options() {
@@ -1340,4 +1321,5 @@ export default class Gantt extends EventEmitter {
     }
 }
 
-export { DEFAULT_OPTIONS };
+export { Gantt, DEFAULT_OPTIONS, date_utils };
+export * from './types';
