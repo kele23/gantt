@@ -33,8 +33,8 @@ export function getDecade(d: Date) {
 
 export function formatWeek(d: Date, ld: Date, lang: string) {
     let endOfWeek = date_utils.add(d, 6, 'day');
-    let endFormat = endOfWeek.getMonth() !== d.getMonth() ? 'D MMM' : 'D';
-    let beginFormat = !ld || d.getMonth() !== ld.getMonth() ? 'D MMM' : 'D';
+    let endFormat = endOfWeek.getMonth() !== d.getMonth() ? 'd MMM' : 'd';
+    let beginFormat = !ld || d.getMonth() !== ld.getMonth() ? 'd MMM' : 'd';
     return `${date_utils.format(d, beginFormat, lang)} - ${date_utils.format(endOfWeek, endFormat, lang)}`;
 }
 

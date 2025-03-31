@@ -1,6 +1,5 @@
 import { Gantt } from '.';
 import Arrow from './arrow';
-import color_utils from './color_utils';
 import date_utils from './date_utils';
 import { animateSVG, createSVG } from './svg_utils';
 import { InternalTask } from './types';
@@ -91,7 +90,7 @@ export default class Bar {
 
         // bind click event
         this._$bar.addEventListener('click', () => {
-            this._gantt.emit('task-click', { task: this._task });
+            this._gantt.emit('bar-click', { task: this._task });
         });
     }
 
@@ -123,33 +122,16 @@ export default class Bar {
 
         let label = this._task.name;
         if (typeof this._gantt.options.bar_config!.get_label === 'function') {
-            const task_group = this._gantt.get_task_group_for_task(this._task);
-            label = this._gantt.options.bar_config!.get_label({
-                task: this._task,
-                task_group,
-            });
+            label = this._gantt.options.bar_config!.get_label(this._task);
         }
 
-        const labelEl = createSVG('text', {
+        createSVG('text', {
             x: x_coord,
             y: this._y + this._height / 2,
             innerHTML: label,
             class: 'bar-label',
             append_to: this._bar_group,
         });
-
-        if (this._task.color) {
-            try {
-                labelEl.style.fill = color_utils.getTextColorForBackground(
-                    this._task.color,
-                );
-            } catch (err) {
-                // do not fail if the text color was invalid
-                // maybe the passed was a name like 'red'
-                // and this feature only supports HEX, HSL and RGB
-                console.warn(err);
-            }
-        }
 
         // labels get BBox in the next tick
         requestAnimationFrame(() => this.update_label_position());
@@ -274,7 +256,7 @@ export default class Bar {
         // TODO: so far, 4 pixels need to be substracted
         // from the x position to match properly in the UI.
         // Is there a way to improve this?
-        let x = diff * column_width + 4;
+        let x = diff * column_width;
 
         /* Since the column width is based on 30,
         we count the month-difference, multiply it by 30 for a "pseudo-month"
@@ -292,26 +274,19 @@ export default class Bar {
     }
 
     compute_duration() {
-        let actual_duration_in_days = 0,
-            duration_in_days = 0;
-        for (
-            let d = new Date(this._task._start);
-            // Possible hack: last update changed comparison from '<' to '<=
-            // This in order to make tasks to take final day as well.
-            // Even this is good to tasks that lasts one day only
-            d <= this._task._end;
-            d.setDate(d.getDate() + 1)
-        ) {
-            duration_in_days++;
-            actual_duration_in_days++;
-        }
-        this._task.actual_duration = actual_duration_in_days;
-
         this._duration =
-            date_utils.convert_scales(
-                duration_in_days + 'd',
+            date_utils.diff(
+                this._task._end,
+                this._task._start,
                 this._gantt.config.unit,
             ) / this._gantt.config.step;
+
+        switch (this._gantt.config.unit) {
+            case 'day':
+            case 'hour':
+                this._duration += 1; // add 1 day or hour in day/hour view
+                break;
+        }
     }
 
     update_attr(element: SVGGraphicsElement, attr: string, value: any) {

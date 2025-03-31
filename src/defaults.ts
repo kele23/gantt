@@ -7,11 +7,11 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
         name: 'Hour',
         padding: '7d',
         step: '1h',
-        date_format: 'YYYY-MM-DD HH:',
+        date_format: 'yyyy-MM-dd HH:',
         lower_text: 'HH',
         upper_text: (d, ld, lang) =>
             !ld || d.getDate() !== ld.getDate()
-                ? date_utils.format(d, 'D MMMM', lang)
+                ? date_utils.format(d, 'd MMMM', lang)
                 : '',
         upper_text_frequency: 24,
     },
@@ -19,11 +19,11 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
         name: 'Quarter Day',
         padding: '7d',
         step: '6h',
-        date_format: 'YYYY-MM-DD HH:',
+        date_format: 'yyyy-MM-dd HH:',
         lower_text: 'HH',
         upper_text: (d, ld, lang) =>
             !ld || d.getDate() !== ld.getDate()
-                ? date_utils.format(d, 'D MMM', lang)
+                ? date_utils.format(d, 'd MMM', lang)
                 : '',
         upper_text_frequency: 4,
     },
@@ -31,24 +31,22 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
         name: 'Half Day',
         padding: '7d',
         step: '12h',
-        date_format: 'YYYY-MM-DD HH:',
+        date_format: 'yyyy-MM-dd HH:',
         lower_text: 'HH',
         upper_text: (d, ld, lang) =>
             !ld || d.getDate() !== ld.getDate()
-                ? d.getMonth() !== d.getMonth()
-                    ? date_utils.format(d, 'D MMM', lang)
-                    : date_utils.format(d, 'D', lang)
+                ? date_utils.format(d, 'd MMM', lang)
                 : '',
         upper_text_frequency: 2,
     },
     day: {
         name: 'Day',
         padding: '7d',
-        date_format: 'YYYY-MM-DD',
+        date_format: 'yyyy-MM-dd',
         step: '1d',
         lower_text: (d, ld, lang) =>
             !ld || d.getDate() !== ld.getDate()
-                ? date_utils.format(d, 'D', lang)
+                ? date_utils.format(d, 'd', lang)
                 : '',
         upper_text: (d, ld, lang) =>
             !ld || d.getMonth() !== ld.getMonth()
@@ -60,7 +58,7 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
         name: 'Week',
         padding: '14d',
         step: '7d',
-        date_format: 'YYYY-MM-DD',
+        date_format: 'yyyy-MM-dd',
         column_width: 200,
         lower_text: formatWeek,
         upper_text: (d, ld, lang) =>
@@ -75,25 +73,23 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
         padding: '14d',
         step: '1m',
         column_width: 350,
-        date_format: 'YYYY-MM',
+        date_format: 'yyyy-MM',
         lower_text: 'MMMM',
         upper_text: (d, ld, lang) =>
             !ld || d.getFullYear() !== ld.getFullYear()
-                ? date_utils.format(d, 'YYYY', lang)
+                ? date_utils.format(d, 'yyyy', lang)
                 : '',
         thick_line: (d) => d.getMonth() % 3 === 0,
-        snap_at: '7d',
     },
     year: {
         name: 'Year',
         padding: '1y',
         step: '1y',
         column_width: 600,
-        date_format: 'YYYY',
+        date_format: 'yyyy',
         upper_text: (d, ld, _lang) =>
             !ld || getDecade(d) !== getDecade(ld) ? getDecade(d) : '',
-        lower_text: 'YYYY',
-        snap_at: '30d',
+        lower_text: 'yyyy',
     },
 };
 
@@ -110,10 +106,18 @@ const DEFAULT_OPTIONS: Options = {
     column_width: undefined,
     date_format: 'YYYY-MM-DD HH:mm',
     enable_left_sidebar_list: false,
-    sidebar_width: 200,
+    sidebar_config: {
+        sidebar_width: 200,
+        get_label: (item) => {
+            return `
+                <div class="tw:flex tw:gap-2 tw:pl-4 tw:h-full tw:cursor-pointer tw:bg-white tw:hover:bg-gray-100 tw:py-1">
+                    ${item.thumbnail ? `<img class="tw:block tw:w-auto tw:h-[40px]" src="${item.thumbnail}" alt="thumb"/>` : ''}
+                    <div class="tw:flex tw:flex-col tw:justify-center tw:h-[40px]"><span class="tw:font-bold tw:text-[14px]">${item.name}</span> ${item.text ? `<span class="tw:text-[12px]">${item.text}</span>` : ''}</div>
+                </div>    
+            `;
+        },
+    },
     holidays: { 'var(--g-weekend-highlight-color)': 'weekend' },
-    ignore: [],
-    infinite_padding: false,
     language: 'en',
     end_date: undefined,
     start_date: undefined,
@@ -121,13 +125,10 @@ const DEFAULT_OPTIONS: Options = {
     lower_header_height: 30,
     move_dependencies: true,
     padding: 18,
-    scroll_to: 'today',
     show_expected_progress: false,
-    snap_at: undefined,
     task_groups_enabled: false,
     today_button: true,
     upper_header_height: 45,
-    view_mode: 'day',
     view_mode_select: false,
     view_modes: ['year', 'month', 'week', 'day', 'hday', 'qday', 'hour'],
     view_modes_def: DEFAULT_VIEW_MODES_DEFS,

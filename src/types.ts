@@ -12,28 +12,19 @@ declare global {
 
 export type BarConfig = {
     show_label_on_offset: boolean;
-    get_label?: ({
-        task,
-        task_group,
-    }: {
-        task: Task;
-        task_group?: TaskGroup;
-    }) => string;
-    on_click?: ({
-        task,
-        task_group,
-    }: {
-        task: Task;
-        task_group?: TaskGroup;
-    }) => void;
+    get_label?: (item: Task) => string;
+};
+
+export type SidebarConfig = {
+    sidebar_width: number;
+    get_label?: (item: TaskGroup) => string;
 };
 
 export type HolidayObject = {
     name: string;
-    date: string;
+    date: Date;
 };
 export type HolidaysConfig = Record<string, 'weekend' | HolidayObject[]>;
-export type IgnoreConfig = any[];
 
 export type ViewModeDef = {
     name: string;
@@ -45,8 +36,9 @@ export type ViewModeDef = {
     upper_text: string | ((d: Date, ld: Date, lang: string) => string);
     upper_text_frequency?: number;
     thick_line?: (d: Date) => boolean;
-    snap_at?: string;
 };
+
+export type ScrollPosition = 'start' | 'end' | 'today' | 'max' | 'min' | Date;
 
 export type Options = {
     arrow_curve?: number;
@@ -59,10 +51,8 @@ export type Options = {
     column_width?: number;
     date_format?: string;
     enable_left_sidebar_list?: boolean;
-    sidebar_width?: number;
+    sidebar_config?: SidebarConfig;
     holidays?: HolidaysConfig;
-    ignore?: IgnoreConfig;
-    infinite_padding?: boolean;
     language?: string;
     end_date?: Date;
     start_date?: Date;
@@ -70,13 +60,10 @@ export type Options = {
     lower_header_height?: number;
     move_dependencies?: boolean;
     padding?: number;
-    scroll_to?: 'start' | 'end' | 'today';
     show_expected_progress?: boolean;
-    snap_at?: string;
     task_groups_enabled?: boolean;
     today_button?: boolean;
     upper_header_height?: number;
-    view_mode?: string;
     view_mode_select?: boolean;
     view_modes?: string[];
     view_modes_def?: Record<string, ViewModeDef>;
@@ -87,12 +74,12 @@ export type Locale = Record<string, string>;
 
 export type Task = {
     id: string;
-    end?: string | Date;
-    start: string | Date;
+    end?: Date;
+    start: Date;
     custom_class?: string;
     duration?: string;
     dependencies?: string | string[];
-    task_group_id?: string;
+    task_group_key?: string;
     name: string;
     progress?: number;
     thumbnail?: string;
@@ -113,6 +100,7 @@ export type InternalTask = Task & {
 
 export type TaskGroup = {
     id: string;
+    key: string;
     name: string;
     thumbnail?: string;
     text?: string;
@@ -137,6 +125,8 @@ export type GanttConfig = {
     step: number;
     view_mode: ViewModeDef;
     view_mode_name: string;
+    highlightStart?: Date;
+    highlightEnd?: Date;
 };
 
 export type DateScale =

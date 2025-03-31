@@ -9,6 +9,7 @@
     <body>
         <div style="padding: 16px 16px">
             <h1>Frappe Gantt</h1>
+            <button id="testDates">Test dates</button>
             <hr />
 
             <div id="mutability"></div>
@@ -41,15 +42,14 @@
                     end: daysSince(2),
                     name: 'Michele Scala',
                     id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                    color: '#ff0000',
+                    task_group_key: 'CA222ZF',
                 },
                 {
                     start: daysSince(3),
                     duration: '6d',
                     name: 'Filippo Didone',
                     id: 'Task 1',
-                    task_group_id: 'HQ222GF',
+                    task_group_key: 'HQ222GF',
                     color: '#880000',
                 },
                 {
@@ -57,7 +57,7 @@
                     duration: '2d',
                     name: 'Alerto Falezza',
                     id: 'Task 2',
-                    task_group_id: 'PO765AF',
+                    task_group_key: 'PO765AF',
                     color: '#33ff00',
                 },
                 {
@@ -65,157 +65,130 @@
                     end: daysSince(0),
                     name: 'Luca Maggiolo',
                     id: 'Task 3',
-                    task_group_id: 'AB123ZF',
+                    task_group_key: 'AB123ZF',
                 },
                 {
                     start: daysSince(20),
                     end: daysSince(24),
                     name: 'Daniele Righetti',
                     id: 'Task 5',
-                    task_group_id: 'AB123ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                    color: '#ff0000',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
-                },
-                {
-                    start: daysSince(-2),
-                    end: daysSince(2),
-                    name: 'Michele Scala',
-                    id: 'Task 0',
-                    task_group_id: 'CA222ZF',
+                    task_group_key: 'AB123ZF',
                 },
             ];
 
             const groups = [
                 {
-                    id: 'CA222ZF',
+                    id: '1',
+                    key: 'CA222ZF',
                     name: 'CA222ZF',
-                    thumbnail: 'https://placehold.co/48x48',
                 },
                 {
-                    id: 'HQ222GF',
+                    id: '2',
+                    key: 'HQ222GF',
                     name: 'HQ222GF',
-                    thumbnail: 'https://placehold.co/48x48',
+                    text: 'safsa',
                 },
                 {
-                    id: 'PO765AF',
+                    id: '3',
+                    key: 'PO765AF',
                     name: 'PO765AF',
                     thumbnail: 'https://placehold.co/48x48',
                 },
                 {
-                    id: 'AB123ZF',
+                    id: '4',
+                    key: '4',
                     name: 'AB123ZF',
+                    text: 'Questo è un test',
+                    thumbnail: 'https://placehold.co/48x48',
+                },
+                {
+                    id: '5',
+                    key: '5',
+                    name: '5',
+                    text: 'Questo è un test',
+                    thumbnail: 'https://placehold.co/48x48',
+                },
+                {
+                    id: '6',
+                    key: '6',
+                    name: '6',
+                    text: 'Questo è un test',
+                    thumbnail: 'https://placehold.co/48x48',
+                },
+                {
+                    id: '7',
+                    key: '7',
+                    name: '7',
+                    text: 'Questo è un test',
+                    thumbnail: 'https://placehold.co/48x48',
+                },
+                {
+                    id: '8',
+                    key: '8',
+                    name: '8',
+                    text: 'Questo è un test',
+                    thumbnail: 'https://placehold.co/48x48',
+                },
+                {
+                    id: '9',
+                    key: '9',
+                    name: '9',
+                    text: 'Questo è un test',
+                    thumbnail: 'https://placehold.co/48x48',
+                },
+                {
+                    id: '10',
+                    key: '10',
+                    name: '10',
+                    text: 'Questo è un test',
+                    thumbnail: 'https://placehold.co/48x48',
+                },
+                {
+                    id: '11',
+                    key: '11',
+                    name: '11',
+                    text: 'Questo è un test',
                     thumbnail: 'https://placehold.co/48x48',
                 },
             ];
 
-            const mutablity = new Gantt(
-                '#mutability',
-                tasks,
-                {
-                    language: 'it',
-                    view_mode_select: true,
-                    task_groups_enabled: true,
-                    container_height: '80vh',
-                    readonly: true,
-                    enable_left_sidebar_list: true,
-                    end_date: new Date('2025-12-01T03:24:00'),
-                },
-                groups,
-            );
+            const mutablity = new Gantt('#mutability', tasks, {}, groups);
 
-            mutablity.on('task-click', ({ task }) => {
+            // setTimeout(() => {
+            mutablity.update_options({
+                language: 'it',
+                view_mode_select: true,
+                task_groups_enabled: true,
+                container_height: '80vh',
+                readonly: true,
+                auto_move_label: false,
+                enable_left_sidebar_list: true,
+                start_date: new Date('2025-01-01T03:24:00'),
+                end_date: new Date('2025-12-31T03:24:00'),
+            });
+            mutablity.changeViewMode('week', daysSince(2)); // render the gantt
+            // }, 5000);
+
+            mutablity.on('bar-click', ({ task }) => {
                 console.log(task.name);
             });
+
+            mutablity.on('side-click', ({ group }) => {
+                console.log(group.name);
+            });
+
+            document
+                .querySelector('#testDates')
+                .addEventListener('click', () => {
+                    if (mutablity.isHighlightingDates()) {
+                        mutablity.resetHighlightDates();
+                    } else {
+                        const start = daysSince(-2);
+                        const end = daysSince(2);
+                        mutablity.highlightDates(start, end);
+                        mutablity.setScrollPosition(start);
+                    }
+                });
         </script>
     </body>
 </html>

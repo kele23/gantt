@@ -1,14 +1,13 @@
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tw);
+
 @import './light.css';
 
 /* GLOBAL WRAPPER */
 .gantt-wrapper {
     display: flex;
     position: relative;
-
-    /* UTILITIES */
-    & .hide {
-        display: none;
-    }
 
     /* Buttons/Popups and other things that goes above the gantt */
     & .extras {
@@ -52,6 +51,7 @@
         & .lower-text,
         & .upper-text {
             text-anchor: middle;
+            text-transform: capitalize;
         }
 
         & .upper-header {
@@ -179,22 +179,17 @@
         fill: white;
     }
 
-    & .gantt-sidebar-row {
-        fill: white;
-    }
-
-    & .gantt-sidebar-label {
-        fill: var(--g-text-dark);
-        dominant-baseline: central;
-        font-family: Helvetica;
-        font-size: 13px;
-        font-weight: 400;
-        pointer-events: none;
-    }
-
     & .gantt-sidebar-line {
         stroke: var(--g-border-color);
     }
+
+    /* & .gantt-highlighter {
+        fill: var(--g-highlighter-color);
+    }
+
+    & .gantt-highlighter-row {
+        fill: var(--g-highlighter-color);
+    } */
 
     /* The GANTT ( SVG ) */
     & .gantt {

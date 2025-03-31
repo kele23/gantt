@@ -12,6 +12,7 @@ import {
     GanttConfig,
     InternalTask,
     Options,
+    ScrollPosition,
     Task,
     TaskGroup,
     ViewModeDef,
@@ -27,7 +28,6 @@ class Gantt extends EventEmitter {
     private _$container: HTMLElement;
     private _$side_header: HTMLElement;
     private _task_groups: TaskGroup[];
-    private _original_options: Options;
     private _tasks: InternalTask[];
     private _dependency_map: Record<string, string[]>;
     private _$sidebar: SVGGElement;
@@ -44,14 +44,19 @@ class Gantt extends EventEmitter {
     private _$extras: HTMLElement;
     private _$adjust: HTMLElement;
     private _grid_height: number;
+    private _$colHighlighter: SVGRectElement;
     private _$header: HTMLElement;
     private _$upper_header: HTMLElement;
     private _$lower_header: HTMLElement;
     private bars: Bar[];
-    private current_date: Date;
+    private current_date_start: Date;
     private $current: HTMLElement;
     private upperTexts: HTMLElement[];
     private arrows: Arrow[];
+    private _$rowHighlighter: SVGRectElement;
+    private _stickyTimeout: any;
+    private _$datesHighlighter: SVGRectElement;
+    current_date: Date;
 
     constructor(
         wrapper: HTMLElement | string,
@@ -62,22 +67,21 @@ class Gantt extends EventEmitter {
         super();
         //@ts-ignore: After is initialized
         this._config = {};
-        this.setup_wrapper(wrapper);
-        this.setup_options(options);
+        this._setup_wrapper(wrapper);
+        this._setup_options(options);
         if (this._options.locales) {
             addLocales(this._options.locales);
         }
-        this.setup_task_groups(task_groups);
-        this.setup_tasks(tasks);
-        this.setupEvents();
-        this.change_view_mode();
+        this._setup_task_groups(task_groups);
+        this._setup_tasks(tasks);
+        this._setupEvents();
     }
 
     /**
      * Setup the wrapper
      * @param element
      */
-    setup_wrapper(element: HTMLElement | string) {
+    private _setup_wrapper(element: HTMLElement | string) {
         let svg_element: SVGGraphicsElement, wrapper_element: HTMLElement;
 
         let realElement: Element;
@@ -105,7 +109,7 @@ class Gantt extends EventEmitter {
             );
         }
 
-        this._$main_wrapper = this.create_el({
+        this._$main_wrapper = this._create_el({
             classes: 'gantt-wrapper',
             append_to: wrapper_element,
         });
@@ -123,7 +127,7 @@ class Gantt extends EventEmitter {
         }
 
         // wrapper element
-        this._$container = this.create_el({
+        this._$container = this._create_el({
             classes: 'gantt-container',
             append_to: this._$svg.parentElement!,
         });
@@ -135,8 +139,7 @@ class Gantt extends EventEmitter {
      * Merge default options with provided ones
      * @param options
      */
-    setup_options(options: Options) {
-        this._original_options = options || {};
+    private _setup_options(options: Options) {
         const default_copy = { ...DEFAULT_OPTIONS };
         this._options = deepMerge(default_copy, options);
         const CSS_VARIABLES: Record<string, string> = {
@@ -156,19 +159,10 @@ class Gantt extends EventEmitter {
     }
 
     /**
-     * Update options
-     * @param options
-     */
-    update_options(options: Options) {
-        this.setup_options({ ...this._original_options, ...options });
-        this.change_view_mode();
-    }
-
-    /**
      * Updated task groups
      * @param task_groups
      */
-    setup_task_groups(task_groups: TaskGroup[]) {
+    private _setup_task_groups(task_groups: TaskGroup[]) {
         if (!Array.isArray(task_groups)) {
             throw new TypeError('task_groups must be an array when defined');
         }
@@ -181,7 +175,7 @@ class Gantt extends EventEmitter {
      * Setup the tasks
      * @param tasks The tasks
      */
-    setup_tasks(tasks: Task[]) {
+    private _setup_tasks(tasks: Task[]) {
         this._tasks = tasks
             .map((otask, i) => {
                 //@ts-ignore: After is set
@@ -196,9 +190,9 @@ class Gantt extends EventEmitter {
                     return;
                 }
 
-                task._start = date_utils.parse(task.start)!;
+                task._start = task.start;
                 if (task.end) {
-                    task._end = date_utils.parse(task.end)!;
+                    task._end = task.end;
                 } else if (task.duration !== undefined) {
                     let { duration, scale } = date_utils.parse_duration(
                         task.duration,
@@ -241,17 +235,10 @@ class Gantt extends EventEmitter {
                     return;
                 }
 
-                const { is_valid, message } = this.cache_index(task, i);
+                const { is_valid, message } = this._cache_index(task, i);
                 if (!is_valid) {
                     console.error(message);
                     return;
-                }
-
-                // if hours is not set, assume the last day is full day
-                // e.g: 2018-09-09 becomes 2018-09-09 23:59:59
-                const task_end_values = date_utils.get_date_values(task._end);
-                if (task_end_values.slice(3).every((d) => d === 0)) {
-                    task._end = date_utils.add(task._end, 24, 'hour');
                 }
 
                 // dependencies
@@ -282,30 +269,30 @@ class Gantt extends EventEmitter {
             })
             .filter((t) => !!t);
 
-        this.setup_dependencies();
+        this._setup_dependencies();
     }
 
-    cache_index(task: InternalTask, index: number) {
+    private _cache_index(task: InternalTask, index: number) {
         if (!this._options.task_groups_enabled) {
             // set to default behavior
             task._index = index;
             return { is_valid: true };
         }
 
-        if (!task.task_group_id) {
+        if (!task.task_group_key) {
             return {
                 is_valid: false,
-                message: `missing "task_group_id" property on task "${task.id}" since "task_groups" are defined`,
+                message: `missing "task_group_key" property on task "${task.id}" since "task_groups" are defined`,
             };
         }
 
         const task_group_index = this._task_groups.findIndex(
-            (task_group) => task_group.id === task.task_group_id,
+            (task_group) => task_group.key === task.task_group_key,
         );
         if (task_group_index < 0) {
             return {
                 is_valid: false,
-                message: `"task_group_id" not found in "task_groups" for task "${task.id}"`,
+                message: `"task_group_key" not found in "task_groups" for task "${task.id}"`,
             };
         }
 
@@ -313,7 +300,7 @@ class Gantt extends EventEmitter {
         return { is_valid: true };
     }
 
-    setup_dependencies() {
+    private _setup_dependencies() {
         this._dependency_map = {};
         for (let t of this._tasks) {
             if (t.dependencies)
@@ -324,10 +311,17 @@ class Gantt extends EventEmitter {
         }
     }
 
+    /**
+     * Update options
+     * @param options
+     */
+    update_options(options: Options) {
+        this._setup_options(options);
+    }
+
     refresh(tasks: Task[], task_groups: TaskGroup[] = []) {
-        this.setup_task_groups(task_groups);
-        this.setup_tasks(tasks);
-        this.change_view_mode();
+        this._setup_task_groups(task_groups);
+        this._setup_tasks(tasks);
     }
 
     update_task(id: string, new_details: InternalTask) {
@@ -339,21 +333,73 @@ class Gantt extends EventEmitter {
         bar.refresh();
     }
 
-    change_view_mode(modeName = this._options.view_mode!) {
+    changeViewMode(modeName = 'day', currentScroll: ScrollPosition = 'today') {
         const mode = this._options.view_modes_def![modeName];
         if (!mode) throw new Error('Invalid view mode');
 
         this.config.view_mode_name = modeName;
         this.config.view_mode = mode;
 
-        this.update_view_scale(mode);
-        this.setup_dates();
-        this.render();
+        this._update_view_scale(mode);
+        this._setup_dates();
+        this._render(currentScroll);
 
         this.emit('view-change', { mode });
     }
 
-    update_view_scale(mode: ViewModeDef) {
+    getCurrentViewMode(): string {
+        return this.config.view_mode_name;
+    }
+
+    getCurrentDate(): Date | undefined {
+        return this.current_date;
+    }
+
+    isHighlightingDates() {
+        return !!this.config?.highlightStart;
+    }
+
+    highlightDates(startDate: Date, endDate: Date) {
+        // set highlighting dates
+        this.config.highlightStart = startDate;
+        this.config.highlightEnd = endDate;
+        this._$datesHighlighter.classList.remove('tw:hidden');
+
+        // get start position
+        const leftStartDiff = date_utils.diff(
+            startDate,
+            this._gantt_start,
+            this.config.unit,
+        );
+        const startLeft =
+            (leftStartDiff / this.config.step) * this.config.column_width;
+
+        // get duration
+        let duration =
+            date_utils.diff(endDate, startDate, this.config.unit) /
+            this.config.step;
+        switch (this.config.unit) {
+            case 'day':
+            case 'hour':
+                duration += 1; // add 1 day or hour in day/hour view
+                break;
+        }
+
+        // set attributes
+        this._$datesHighlighter.setAttribute('x', `${startLeft}`);
+        this._$datesHighlighter.setAttribute(
+            'width',
+            `${duration * this.config.column_width}`,
+        );
+    }
+
+    resetHighlightDates() {
+        this.config.highlightStart = undefined;
+        this.config.highlightEnd = undefined;
+        this._$datesHighlighter.classList.add('tw:hidden');
+    }
+
+    private _update_view_scale(mode: ViewModeDef) {
         let { duration, scale } = date_utils.parse_duration(mode.step);
         this._config.step = duration;
         this._config.unit = scale;
@@ -369,12 +415,12 @@ class Gantt extends EventEmitter {
             10;
     }
 
-    setup_dates() {
-        this.setup_gantt_dates();
-        this.setup_date_values();
+    private _setup_dates() {
+        this._setup_gantt_dates();
+        this._setup_date_values();
     }
 
-    setup_gantt_dates() {
+    private _setup_gantt_dates() {
         let gantt_start, gantt_end;
         if (!this._tasks.length) {
             gantt_start = new Date();
@@ -416,7 +462,7 @@ class Gantt extends EventEmitter {
         this._gantt_start.setHours(0, 0, 0, 0);
     }
 
-    setup_date_values() {
+    private _setup_date_values() {
         let cur_date = this._gantt_start;
         this._dates = [cur_date];
 
@@ -430,31 +476,33 @@ class Gantt extends EventEmitter {
         }
     }
 
-    setupEvents() {
-        let x_on_scroll_start = 0;
+    private _setupEvents() {
+        let lastScrollX = 0;
         this._$container.addEventListener('scroll', (e) => {
             const target = e.currentTarget as HTMLElement;
 
-            let localBars = [];
-            const ids = this.bars.map(({ group }) =>
-                group.getAttribute('data-id'),
-            );
-            let dx;
-            if (x_on_scroll_start) {
-                dx = target.scrollLeft - x_on_scroll_start;
-            }
-
             // Calculate current scroll position's upper text
-            this.current_date = date_utils.add(
+            this.current_date_start = date_utils.add(
                 this._gantt_start,
                 (target.scrollLeft / this.config.column_width) *
                     this.config.step,
                 this.config.unit,
             );
 
+            // calculate center position date
+            const centerPos =
+                ((target.scrollLeft + this._$container.clientWidth / 2) /
+                    this.config.column_width) *
+                this.config.step;
+            this.current_date = date_utils.add(
+                this._gantt_start,
+                centerPos,
+                this.config.unit,
+            );
+
             //@ts-ignore: checked before
             let current_upper = this.config.view_mode.upper_text(
-                this.current_date,
+                this.current_date_start,
                 null,
                 this.options.language,
             );
@@ -463,7 +511,7 @@ class Gantt extends EventEmitter {
             )!;
 
             // Recalculate for smoother experience
-            this.current_date = date_utils.add(
+            this.current_date_start = date_utils.add(
                 this._gantt_start,
                 ((target.scrollLeft + $el.clientWidth) /
                     this.config.column_width) *
@@ -473,7 +521,7 @@ class Gantt extends EventEmitter {
 
             //@ts-ignore: checked before
             current_upper = this.config.view_mode.upper_text(
-                this.current_date,
+                this.current_date_start,
                 null,
                 this.options.language,
             );
@@ -489,36 +537,37 @@ class Gantt extends EventEmitter {
                 this.$current = $el;
             }
 
-            x_on_scroll_start = target.scrollLeft;
-            let [min_start, max_start, max_end] =
-                this.get_start_end_positions();
+            let x_on_scroll_start = target.scrollLeft;
+            let [min_start, max_end] = this._get_start_end_positions();
 
             if (x_on_scroll_start > max_end + 100) {
                 this._$adjust.innerHTML = '&larr;';
-                this._$adjust.classList.remove('hide');
+                this._$adjust.classList.remove('tw:hidden');
                 this._$adjust.onclick = () => {
-                    this._$container.scrollTo({
-                        left: max_start - 100,
-                        behavior: 'smooth',
-                    });
+                    this.setScrollPosition('max', 'smooth');
                 };
             } else if (
                 x_on_scroll_start + target.offsetWidth <
                 min_start - 100
             ) {
                 this._$adjust.innerHTML = '&rarr;';
-                this._$adjust.classList.remove('hide');
+                this._$adjust.classList.remove('tw:hidden');
                 this._$adjust.onclick = () => {
-                    this._$container.scrollTo({
-                        left: min_start + 100,
-                        behavior: 'smooth',
-                    });
+                    this.setScrollPosition('min', 'smooth');
                 };
             } else {
-                this._$adjust.classList.add('hide');
+                this._$adjust.classList.add('tw:hidden');
             }
 
-            if (dx) {
+            // handle text move during scroll
+            let dx;
+            if (x_on_scroll_start) dx = target.scrollLeft - x_on_scroll_start;
+
+            if (this.options.auto_move_label && dx) {
+                let localBars = [];
+                const ids = this.bars.map(({ group }) =>
+                    group.getAttribute('data-id'),
+                );
                 localBars = ids.map((id) => this.get_bar(id!)!);
                 if (this.options.auto_move_label) {
                     localBars.forEach((bar) => {
@@ -530,28 +579,81 @@ class Gantt extends EventEmitter {
                 }
             }
 
-            this._$sidebar.setAttribute(
-                'transform',
-                `translate(${target.scrollLeft},0)`,
-            );
+            // sticky sidebar
+            if (lastScrollX != target.scrollLeft) {
+                if (this._stickyTimeout) clearTimeout(this._stickyTimeout);
+                this._$sidebar.setAttribute('opacity', '0');
+                this._stickyTimeout = setTimeout(() => {
+                    this._$sidebar.setAttribute('opacity', '1');
+                    this._$sidebar?.setAttribute(
+                        'transform',
+                        `translate(${this._$container.scrollLeft}, 0)`,
+                    );
+                }, 200);
+            }
+
+            lastScrollX = target.scrollLeft;
         });
+
+        /**
+         * COL Highlighter
+         */
+        this._$svg.addEventListener(
+            'mousemove',
+            (e) => {
+                const target = e.target as SVGGraphicsElement;
+
+                // handle col highlight
+                this._$colHighlighter.classList.remove('tw:opacity-0');
+                const rect = this._$container.getBoundingClientRect();
+                const x = e.clientX - rect.left + this._$container.scrollLeft;
+
+                const p =
+                    Math.floor(x / this.config.column_width) *
+                    this.config.column_width;
+                this._$colHighlighter.setAttribute('x', `${p}`);
+
+                // handle row highlight
+                const row = target.closest('.gantt-sidebar-row') as SVGElement;
+                if (row) {
+                    const y = row.getY();
+                    this._$rowHighlighter?.classList.remove('tw:opacity-0');
+                    this._$rowHighlighter?.setAttribute('y', `${y}`);
+                } else {
+                    this._$rowHighlighter?.classList.add('tw:opacity-0');
+                }
+            },
+            { passive: true },
+        );
+        this._$svg.addEventListener(
+            'mouseleave',
+            (e) => {
+                const target = e.target as SVGGraphicsElement;
+
+                this._$colHighlighter.classList.add('tw:opacity-0');
+
+                const row = target.closest('.gantt-sidebar-row');
+                if (!row) this._$rowHighlighter?.classList.add('tw:opacity-0');
+            },
+            { passive: true },
+        );
     }
 
-    render() {
+    private _render(currentScroll: ScrollPosition) {
         this.clear();
-        this.setup_layers();
-        this.make_grid();
-        this.make_dates();
-        this.make_grid_extras();
-        this.make_bars();
-        this.make_arrows();
-        this.map_arrows_on_bars();
-        this.fill_left_sidebar_list();
-        this.set_dimensions();
-        this.set_scroll_position(this._options.scroll_to!);
+        this._setup_layers();
+        this._make_grid();
+        this._make_dates();
+        this._make_grid_extras();
+        this._make_bars();
+        this._make_arrows();
+        this._map_arrows_on_bars();
+        this._fill_left_sidebar_list();
+        this._set_dimensions();
+        this.setScrollPosition(currentScroll);
     }
 
-    setup_layers() {
+    private _setup_layers() {
         this._layers = {
             grid: createSVG('g', {
                 class: 'grid',
@@ -571,32 +673,33 @@ class Gantt extends EventEmitter {
             }) as SVGGElement,
         };
 
-        this._$extras = this.create_el({
+        this._$extras = this._create_el({
             classes: 'extras',
             append_to: this._$main_wrapper,
         });
-        this._$adjust = this.create_el({
-            classes: 'adjust hide',
+        this._$adjust = this._create_el({
+            classes: 'adjust tw:hide',
             append_to: this._$extras,
             type: 'button',
         });
         this._$adjust.innerHTML = '&larr;';
     }
 
-    make_grid() {
-        this.make_grid_background();
-        this.make_grid_rows();
-        this.make_grid_header();
-        this.make_side_header();
+    private _make_grid() {
+        this._make_grid_background();
+        this._make_grid_rows();
+        this._make_grid_header();
+        this._make_side_header();
     }
 
-    make_grid_extras() {
-        this.highlight_holidays();
-        this.highlight_current();
-        this.make_grid_ticks();
+    private _make_grid_extras() {
+        this._highlight_holidays();
+        this._highlight_current();
+        this._make_grid_highlighter();
+        this._make_grid_ticks();
     }
 
-    make_grid_background() {
+    private _make_grid_background() {
         const grid_width = this._dates.length * this._config.column_width;
         const sidebar_list_items = this._options.task_groups_enabled
             ? this._task_groups
@@ -635,7 +738,7 @@ class Gantt extends EventEmitter {
         });
     }
 
-    make_grid_rows() {
+    private _make_grid_rows() {
         const rows_layer = createSVG('g', { append_to: this._layers.grid });
 
         const row_width = this._dates.length * this._config.column_width;
@@ -657,25 +760,25 @@ class Gantt extends EventEmitter {
         }
     }
 
-    make_grid_header() {
-        this._$header = this.create_el({
+    private _make_grid_header() {
+        this._$header = this._create_el({
             width: this._dates.length * this._config.column_width,
             classes: 'grid-header',
             append_to: this._$container,
         });
 
-        this._$upper_header = this.create_el({
+        this._$upper_header = this._create_el({
             classes: 'upper-header',
             append_to: this._$header,
         });
-        this._$lower_header = this.create_el({
+        this._$lower_header = this._create_el({
             classes: 'lower-header',
             append_to: this._$header,
         });
     }
 
-    make_side_header() {
-        this._$side_header = this.create_el({ classes: 'side-header' });
+    private _make_side_header() {
+        this._$side_header = this._create_el({ classes: 'side-header' });
         this._$upper_header.prepend(this._$side_header);
 
         // Create view mode change select
@@ -705,7 +808,10 @@ class Gantt extends EventEmitter {
             }
 
             $select.addEventListener('change', () => {
-                this.change_view_mode($select.value);
+                this.changeViewMode(
+                    $select.value,
+                    this.current_date || 'today',
+                );
             });
             this._$side_header.appendChild($select);
         }
@@ -718,12 +824,14 @@ class Gantt extends EventEmitter {
                 'Today',
                 this._options.language!,
             );
-            $today_button.onclick = this.scroll_current.bind(this);
+            $today_button.onclick = () => {
+                this.setScrollPosition('today', 'smooth');
+            };
             this._$side_header.prepend($today_button);
         }
     }
 
-    make_grid_ticks() {
+    private _make_grid_ticks() {
         if (this._options.lines === 'none') return;
         let tick_x = 0;
         let tick_y = this._config.header_height;
@@ -772,12 +880,12 @@ class Gantt extends EventEmitter {
                 append_to: this._layers.grid,
             });
 
-            if (this.view_is('month')) {
+            if (this._view_is('month')) {
                 tick_x +=
                     (date_utils.get_days_in_month(date) *
                         this._config.column_width) /
                     30;
-            } else if (this.view_is('year')) {
+            } else if (this._view_is('year')) {
                 tick_x +=
                     (date_utils.get_days_in_year(date) *
                         this._config.column_width) /
@@ -788,7 +896,43 @@ class Gantt extends EventEmitter {
         }
     }
 
-    highlight_holidays() {
+    private _make_grid_highlighter() {
+        this._$colHighlighter = createSVG('rect', {
+            x: 0,
+            y: 0,
+            width: this._config.column_width,
+            height: '100%',
+            class: 'tw:fill-gray-100 tw:opacity-0',
+            append_to: this._layers.grid,
+        }) as SVGRectElement;
+
+        this._$rowHighlighter = createSVG('rect', {
+            x: 0,
+            y: 0,
+            width: '100%',
+            height: this._options.bar_height! + this._options.padding!,
+            class: 'tw:fill-gray-100 tw:opacity-0',
+            append_to: this._layers.grid,
+        }) as SVGRectElement;
+
+        this._$datesHighlighter = createSVG('rect', {
+            x: 0,
+            y: 0,
+            width: this._config.column_width,
+            height: '100%',
+            class: 'tw:fill-green-100 tw:hidden',
+            append_to: this._layers.grid,
+        }) as SVGRectElement;
+
+        if (this.config.highlightStart) {
+            this.highlightDates(
+                this.config.highlightStart,
+                this.config.highlightEnd!,
+            );
+        }
+    }
+
+    private _highlight_holidays() {
         let labels = {};
         if (!this._options.holidays) return;
 
@@ -799,7 +943,7 @@ class Gantt extends EventEmitter {
                 fnHighlight = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
             } else {
                 for (let hi of check_highlight) {
-                    let dateObj = new Date(hi.date + ' ');
+                    let dateObj = hi.date;
                     fnHighlight = (d: Date) =>
                         dateObj.getTime() === d.getTime();
                     //@ts-ignore: To fix
@@ -864,11 +1008,8 @@ class Gantt extends EventEmitter {
      *
      * @returns Object containing the x-axis distance and date of the current date, or null if the current date is out of the gantt range.
      */
-    highlight_current() {
-        const res = this.get_closest_date();
-        if (!res) return;
-
-        const { el } = res;
+    private _highlight_current() {
+        const { el } = this._get_closest_date(new Date());
         el.classList.add('current-date-highlight');
 
         const diff_in_units = date_utils.diff(
@@ -890,7 +1031,7 @@ class Gantt extends EventEmitter {
         });
     }
 
-    create_el({
+    private _create_el({
         left,
         top,
         width,
@@ -923,10 +1064,10 @@ class Gantt extends EventEmitter {
         return $el;
     }
 
-    make_dates() {
-        this.get_dates_to_draw().forEach((date) => {
+    private _make_dates() {
+        this._get_dates_to_draw().forEach((date) => {
             if (date.lower_text) {
-                let $lower_text = this.create_el({
+                let $lower_text = this._create_el({
                     left: date.x,
                     top: date.lower_y,
                     classes: 'lower-text date_' + sanitize(date.formatted_date),
@@ -936,7 +1077,7 @@ class Gantt extends EventEmitter {
             }
 
             if (date.upper_text) {
-                let $upper_text = this.create_el({
+                let $upper_text = this._create_el({
                     left: date.x,
                     top: date.upper_y,
                     classes: 'upper-text',
@@ -950,17 +1091,17 @@ class Gantt extends EventEmitter {
         );
     }
 
-    get_dates_to_draw() {
+    private _get_dates_to_draw() {
         let last_date_info: DateInfo | undefined = undefined;
         const dates = this._dates.map((date) => {
-            const d = this.get_date_info(date, last_date_info);
+            const d = this._get_date_info(date, last_date_info);
             last_date_info = d;
             return d;
         });
         return dates;
     }
 
-    get_date_info(date: Date, last_date_info?: DateInfo): DateInfo {
+    private _get_date_info(date: Date, last_date_info?: DateInfo): DateInfo {
         let last_date = last_date_info ? last_date_info.date : null;
 
         const x = last_date_info
@@ -1012,18 +1153,20 @@ class Gantt extends EventEmitter {
         };
     }
 
-    fill_left_sidebar_list() {
-        if (!this._options.enable_left_sidebar_list) {
+    private _fill_left_sidebar_list() {
+        if (
+            !this._options.enable_left_sidebar_list ||
+            !this._options.task_groups_enabled
+        ) {
             return;
         }
 
         // make sidebar
         this._$sidebar = createSVG('g', {
-            class: 'gantt-sidebar',
             append_to: this._$svg,
         });
 
-        const width = this._options.sidebar_width!;
+        const width = this._options.sidebar_config!.sidebar_width!;
         const height = this._options.bar_height! + this._options.padding!;
 
         // full sidebar rect
@@ -1033,46 +1176,36 @@ class Gantt extends EventEmitter {
             width: width,
             height: '100%',
             append_to: this._$sidebar,
-            class: 'gantt-sidebar-bg',
+            class: 'tw:fill-white tw:drop-shadow-sm',
         });
 
         // make rows
-        const sidebar_list_items = this._options.task_groups_enabled
-            ? this._task_groups
-            : this._tasks;
-
+        const sidebar_list_items = this._task_groups;
         sidebar_list_items.forEach((item, index) => {
             const y = this._config.header_height + index * height;
 
-            createSVG('rect', {
+            const innerHtml = this._options.sidebar_config?.get_label
+                ? this._options.sidebar_config?.get_label(item)
+                : item.name;
+
+            const obj = createSVG('foreignObject', {
                 x: 0,
                 y: y,
                 width: width,
                 height: height,
-                append_to: this._$sidebar,
-                class: 'gantt-sidebar-row',
-            });
-
-            createSVG('text', {
-                x: 20,
-                y: y + height / 2,
-                innerHTML: item.name,
-                class: 'gantt-sidebar-label',
+                innerHTML: innerHtml,
+                class: 'gantt-sidebar-row tw:border-b tw:border-gray-100',
                 append_to: this._$sidebar,
             });
 
-            createSVG('line', {
-                x1: 0,
-                y1: y + height,
-                x2: width,
-                y2: y + height,
-                class: 'gantt-sidebar-line',
-                append_to: this._$sidebar,
+            // bind click event
+            obj.addEventListener('click', () => {
+                this.emit('side-click', { group: item });
             });
         });
     }
 
-    make_bars() {
+    private _make_bars() {
         this.bars = this._tasks.map((task) => {
             const bar = new Bar(this, task);
             this._layers.bar.appendChild(bar.group);
@@ -1080,13 +1213,13 @@ class Gantt extends EventEmitter {
         });
     }
 
-    make_arrows() {
+    private _make_arrows() {
         this.arrows = [];
         for (let task of this._tasks) {
             let arrows = [];
             arrows = task.dependencies
                 .map((task_id) => {
-                    const dependency = this.get_task(task_id);
+                    const dependency = this._get_task(task_id);
                     if (!dependency) return;
                     const arrow = new Arrow(
                         this,
@@ -1101,7 +1234,7 @@ class Gantt extends EventEmitter {
         }
     }
 
-    map_arrows_on_bars() {
+    private _map_arrows_on_bars() {
         for (let bar of this.bars) {
             bar.setArrows(
                 this.arrows.filter((arrow) => {
@@ -1114,7 +1247,7 @@ class Gantt extends EventEmitter {
         }
     }
 
-    set_dimensions() {
+    private _set_dimensions() {
         const { width: cur_width } = this._$svg.getBoundingClientRect();
         const actual_width = this._$svg.querySelector('.grid .grid-row')
             ? this._$svg.querySelector('.grid .grid-row')!.getAttribute('width')
@@ -1124,19 +1257,41 @@ class Gantt extends EventEmitter {
         }
     }
 
-    set_scroll_position(date: 'start' | 'end' | 'today' | string | Date) {
-        if (!date || date === 'start') {
+    setScrollPosition(
+        nDate: 'start' | 'end' | 'today' | 'max' | 'min' | Date,
+        behavior: 'auto' | 'instant' | 'smooth' = 'instant',
+    ) {
+        let date = this._gantt_start;
+
+        if (nDate === 'start') {
             date = this._gantt_start;
-        } else if (date === 'end') {
+        } else if (nDate === 'end') {
             date = this._gantt_end;
-        } else if (date === 'today') {
-            return this.scroll_current();
-        } else if (typeof date === 'string') {
-            date = date_utils.parse(date)!;
+        } else if (nDate === 'today') {
+            let { date: d } = this._get_closest_date(new Date());
+            date = d;
+        } else if (nDate == 'max') {
+            const max = Math.max(
+                ...this._tasks.map((item) => item._end.getTime()),
+            );
+            date = new Date(max);
+        } else if (nDate == 'min') {
+            const min = Math.min(
+                ...this._tasks.map((item) => item._end.getTime()),
+            );
+            date = new Date(min);
+        } else if (date <= this._gantt_end && date >= this._gantt_start) {
+            date = nDate;
         }
 
-        // Weird bug where infinite padding results in one day offset in scroll
-        // Related to header-body displacement
+        let left = this._getScrollByDate(date);
+        this._$container.scrollTo({
+            left,
+            behavior,
+        });
+    }
+
+    private _getScrollByDate(date: Date) {
         const units_since_first_task = date_utils.diff(
             date,
             this._gantt_start,
@@ -1146,69 +1301,32 @@ class Gantt extends EventEmitter {
             (units_since_first_task / this._config.step) *
             this._config.column_width;
 
-        this._$container.scrollTo({
-            left: scroll_pos - this._config.column_width / 6,
-            behavior: 'smooth',
-        });
+        let left =
+            scroll_pos -
+            this._config.column_width / 6 -
+            this._$container.offsetWidth / 2;
+        if (left < 0) left = 0;
+        if (left > this._$container.scrollWidth)
+            left = this._$container.scrollWidth;
+        return left;
+    }
 
-        // Calculate current scroll position's upper text
-        if (this.$current) {
-            this.$current.classList.remove('current-upper');
+    private _get_closest_date(date: Date) {
+        if (date < this._gantt_start || date > this._gantt_end) {
+            throw new Error('Invalid date');
         }
 
-        this.current_date = date_utils.add(
-            this._gantt_start,
-            this._$container.scrollLeft / this._config.column_width,
-            this._config.unit,
-        );
-        //@ts-ignore: i've lready check
-        let current_upper = this._config.view_mode.upper_text(
-            this.current_date,
-            null,
-            this._options.language,
-        );
-        let $el = this.upperTexts.find(
-            (el) => el.textContent === current_upper,
-        )!;
-
-        // Recalculate
-        this.current_date = date_utils.add(
-            this._gantt_start,
-            (this._$container.scrollLeft + $el.clientWidth) /
-                this._config.column_width,
-            this._config.unit,
-        );
-        //@ts-ignore: i've lready check
-        current_upper = this._config.view_mode.upper_text(
-            this.current_date,
-            null,
-            this._options.language,
-        );
-        $el = this.upperTexts.find((el) => el.textContent === current_upper)!;
-        $el.classList.add('current-upper');
-        this.$current = $el;
-    }
-
-    scroll_current() {
-        let res = this.get_closest_date();
-        if (res) this.set_scroll_position(res.date);
-    }
-
-    get_closest_date() {
-        let now = new Date();
-        if (now < this._gantt_start || now > this._gantt_end) return null;
-
-        let current = new Date(),
-            el = this._$container.querySelector(
-                '.date_' +
-                    sanitize(
-                        date_utils.format(
-                            current,
-                            this._config.date_format,
-                            this._options.language,
-                        ),
+        let current = new Date(date);
+        let el = this._$container.querySelector(
+            '.date_' +
+                sanitize(
+                    date_utils.format(
+                        current,
+                        this._config.date_format,
+                        this._options.language,
                     ),
-            );
+                ),
+        );
 
         // safety check to prevent infinite loop
         let c = 0;
@@ -1227,18 +1345,12 @@ class Gantt extends EventEmitter {
             c++;
         }
         return {
-            date: new Date(
-                date_utils.format(
-                    current,
-                    this._config.date_format,
-                    this._options.language,
-                ) + ' ',
-            ),
+            date: current,
             el: el!,
         };
     }
 
-    get_start_end_positions() {
+    private _get_start_end_positions() {
         if (!this.bars.length) return [0, 0, 0];
         let { x, width } = this.bars[0].group.getBBox();
         let min_start = x;
@@ -1254,27 +1366,11 @@ class Gantt extends EventEmitter {
         return [min_start, max_start, max_end];
     }
 
-    get_all_dependent_tasks(task_id: string) {
-        let out: string[] = [];
-        let to_process = [task_id];
-        while (to_process.length) {
-            const deps = to_process.reduce((acc, curr) => {
-                acc = acc.concat(this._dependency_map[curr]);
-                return acc;
-            }, [] as string[]);
-
-            out = out.concat(deps);
-            to_process = deps.filter((d) => !to_process.includes(d));
-        }
-
-        return out.filter(Boolean);
-    }
-
-    view_is(mode: string) {
+    private _view_is(mode: string) {
         return this._config.view_mode_name === mode;
     }
 
-    get_task(id: string) {
+    private _get_task(id: string) {
         return this._tasks.find((task) => {
             return task.id === id;
         });
@@ -1288,7 +1384,7 @@ class Gantt extends EventEmitter {
 
     get_task_group_for_task(task: Task) {
         return this._task_groups.find(
-            (task_group) => task_group.id === task.task_group_id,
+            (task_group) => task_group.key === task.task_group_key,
         );
     }
 

@@ -1,9 +1,11 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
     plugins: [
+        tailwindcss(),
         dts({
             rollupTypes: true,
         }),

@@ -4,20 +4,16 @@ import en_US from './locales/en-US.json';
 import es_ES from './locales/es-ES.json';
 import fr_FR from './locales/fr-FR.json';
 import it_IT from './locales/it-IT.json';
+import { it, enUS as en, fr, es, de } from 'date-fns/locale';
 import { Locale } from './types';
 
 // Static map of all available locales
 const locales: Record<string, Locale> = {
     en: en_US,
-    'en-US': en_US,
     it: it_IT,
-    'it-IT': it_IT,
     fr: fr_FR,
-    'fr-FR': fr_FR,
     es: es_ES,
-    'es-ES': es_ES,
     de: de_DE,
-    'de-DE': de_DE,
 };
 
 /**
@@ -31,6 +27,23 @@ export function addLocales(customLocales: Record<string, Locale>) {
     Object.keys(customLocales).forEach((langCode) => {
         locales[langCode] = customLocales[langCode];
     });
+}
+
+export function getDateFnsLocale(locale: string) {
+    switch (normalizeLangCode(locale)) {
+        case 'en':
+            return en;
+        case 'it':
+            return it;
+        case 'fr':
+            return fr;
+        case 'es':
+            return es;
+        case 'de':
+            return de;
+    }
+
+    throw new Error('Invalid locale code');
 }
 
 /**
