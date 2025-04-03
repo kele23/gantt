@@ -1,6 +1,5 @@
 import date_utils from './date_utils';
 import { Options, ViewModeDef } from './types';
-import { formatWeek, getDecade } from './utils';
 
 const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
     hour: {
@@ -57,10 +56,17 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
     week: {
         name: 'Week',
         padding: '14d',
-        step: '7d',
-        date_format: 'yyyy-MM-dd',
+        step: '1w',
+        date_format: 'ww yyyy',
         column_width: 200,
-        lower_text: formatWeek,
+        lower_text: (d: Date, ld: Date, lang: string) => {
+            let endOfWeek = date_utils.add(d, 6, 'day');
+            let endFormat =
+                endOfWeek.getMonth() !== d.getMonth() ? 'd MMM' : 'd';
+            let beginFormat =
+                !ld || d.getMonth() !== ld.getMonth() ? 'd MMM' : 'd';
+            return `${date_utils.format(d, beginFormat, lang)} - ${date_utils.format(endOfWeek, endFormat, lang)}`;
+        },
         upper_text: (d, ld, lang) =>
             !ld || d.getMonth() !== ld.getMonth()
                 ? date_utils.format(d, 'MMMM', lang)
@@ -88,7 +94,10 @@ const DEFAULT_VIEW_MODES_DEFS: Record<string, ViewModeDef> = {
         column_width: 600,
         date_format: 'yyyy',
         upper_text: (d, ld, _lang) =>
-            !ld || getDecade(d) !== getDecade(ld) ? getDecade(d) : '',
+            `` +
+            (!ld || date_utils.getDecade(d) !== date_utils.getDecade(ld)
+                ? date_utils.getDecade(d)
+                : ''),
         lower_text: 'yyyy',
     },
 };

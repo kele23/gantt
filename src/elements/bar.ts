@@ -292,7 +292,6 @@ export default class Bar {
             ) / this._gantt.config.step;
 
         switch (this._gantt.config.unit) {
-            case 'day':
             case 'hour':
                 this._duration += 1; // add 1 day or hour in day/hour view
                 break;

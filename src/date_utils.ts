@@ -5,6 +5,7 @@ import {
     addMinutes,
     addMonths,
     addSeconds,
+    addWeeks,
     addYears,
     differenceInDays,
     differenceInHours,
@@ -14,12 +15,14 @@ import {
     format,
     getDaysInMonth,
     getDaysInYear,
+    getDecade,
     startOfDay,
     startOfHour,
     startOfMinute,
     startOfMonth,
     startOfSecond,
     startOfToday,
+    startOfWeek,
     startOfYear,
 } from 'date-fns';
 import { getDateFnsLocale } from './i18n';
@@ -27,7 +30,7 @@ import { DateScale } from './types';
 
 export default {
     parse_duration(duration: string): { duration: number; scale: DateScale } {
-        const regex = /([0-9]+)(y|m|d|h|min|s|ms)/gm;
+        const regex = /([0-9]+)(y|m|w|d|h|min|s|ms)/gm;
         const matches = regex.exec(duration);
         if (!matches) throw new Error('Invalid duration');
 
@@ -35,6 +38,8 @@ export default {
             return { duration: parseInt(matches[1]), scale: `year` };
         } else if (matches[2] === 'm') {
             return { duration: parseInt(matches[1]), scale: `month` };
+        } else if (matches[2] === 'w') {
+            return { duration: parseInt(matches[1]), scale: `week` };
         } else if (matches[2] === 'd') {
             return { duration: parseInt(matches[1]), scale: `day` };
         } else if (matches[2] === 'h') {
@@ -50,8 +55,12 @@ export default {
         }
     },
 
+    getDecade(date: Date) {
+        return getDecade(date);
+    },
+
     format(date: Date, date_format = 'yyyy-MM-dd HH:mm:ss.SSS', lang = 'en') {
-        return format(date, date_format, { locale: getDateFnsLocale(lang),  });
+        return format(date, date_format, { locale: getDateFnsLocale(lang) });
     },
 
     diff(date_a: Date, date_b: Date, scale: DateScale = 'day') {
@@ -60,8 +69,10 @@ export default {
                 return differenceInDays(date_a, date_b) / 365;
             case 'month':
                 return differenceInDays(date_a, date_b) / 30;
+            case 'week':
+                return differenceInHours(date_a, date_b) / (24 * 7);
             case 'day':
-                return differenceInDays(date_a, date_b);
+                return differenceInHours(date_a, date_b) / 24;
             case 'hour':
                 return differenceInHours(date_a, date_b);
             case 'minute':
@@ -87,6 +98,8 @@ export default {
                 return addYears(date, qty);
             case 'month':
                 return addMonths(date, qty);
+            case 'week':
+                return addWeeks(date, qty);
             case 'day':
                 return addDays(date, qty);
             case 'hour':
@@ -100,12 +113,14 @@ export default {
         }
     },
 
-    start_of(date: Date, scale: DateScale) {
+    start_of(date: Date, scale: DateScale, lang = 'en') {
         switch (scale) {
             case 'year':
                 return startOfYear(date);
             case 'month':
                 return startOfMonth(date);
+            case 'week':
+                return startOfWeek(date, { locale: getDateFnsLocale(lang) });
             case 'day':
                 return startOfDay(date);
             case 'hour':
@@ -143,6 +158,7 @@ export default {
             minute: 1 / 60 / 24,
             hour: 1 / 24,
             day: 1,
+            week: 7,
             month: 30,
             year: 365,
         };

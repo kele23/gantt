@@ -433,8 +433,16 @@ export class Gantt extends EventEmitter {
             }
         }
 
-        gantt_start = date_utils.start_of(gantt_start!, this._config.unit);
-        gantt_end = date_utils.start_of(gantt_end!, this._config.unit);
+        gantt_start = date_utils.start_of(
+            gantt_start!,
+            this._config.unit,
+            this._options.language,
+        );
+        gantt_end = date_utils.start_of(
+            gantt_end!,
+            this._config.unit,
+            this._options.language,
+        );
 
         let [padding_start, padding_end] = [
             date_utils.parse_duration(this._config.view_mode.padding),

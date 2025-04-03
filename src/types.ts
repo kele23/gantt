@@ -135,6 +135,7 @@ export type GanttConfig = {
 export type DateScale =
     | 'year'
     | 'month'
+    | 'week'
     | 'day'
     | 'hour'
     | 'minute'

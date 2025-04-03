@@ -1,4 +1,3 @@
-import date_utils from './date_utils';
 import { Item } from './types';
 
 export function generate_id(task: Item) {
@@ -24,18 +23,6 @@ export function deepMerge<T>(target: T, source: T) {
         }
     }
     return target;
-}
-
-export function getDecade(d: Date) {
-    const year = d.getFullYear();
-    return year - (year % 10) + '';
-}
-
-export function formatWeek(d: Date, ld: Date, lang: string) {
-    let endOfWeek = date_utils.add(d, 6, 'day');
-    let endFormat = endOfWeek.getMonth() !== d.getMonth() ? 'd MMM' : 'd';
-    let beginFormat = !ld || d.getMonth() !== ld.getMonth() ? 'd MMM' : 'd';
-    return `${date_utils.format(d, beginFormat, lang)} - ${date_utils.format(endOfWeek, endFormat, lang)}`;
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
