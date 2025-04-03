@@ -322,7 +322,7 @@ export class Gantt extends EventEmitter {
         this._setupItems(elements);
     }
 
-    updateItem(id: string, newItem: Item) {
+    updateItem(_id: string, _newItem: Item) {
         throw 'to implement';
     }
 
