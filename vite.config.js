@@ -4,12 +4,7 @@ import dts from 'vite-plugin-dts';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-    plugins: [
-        tailwindcss(),
-        dts({
-            rollupTypes: true,
-        }),
-    ],
+    plugins: [tailwindcss(), dts()],
     build: {
         lib: {
             entry: resolve(__dirname, 'src/index.ts'),

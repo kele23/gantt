@@ -4,4 +4,3 @@ import { DEFAULT_OPTIONS } from './defaults';
 import { Gantt } from './gantt';
 
 export { Gantt, DEFAULT_OPTIONS, date_utils };
-export * from './types';

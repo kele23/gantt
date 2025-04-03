@@ -1,5 +1,6 @@
-import { Gantt, InternalItem } from '..';
+import { Gantt } from '../gantt';
 import { createSVG } from '../svg_utils';
+import { InternalItem } from '../types';
 
 export default class Arrow {
     private _gantt: Gantt;
