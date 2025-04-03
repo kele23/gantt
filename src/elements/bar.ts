@@ -1,12 +1,12 @@
-import { Gantt } from '.';
+import { Gantt } from '..';
+import date_utils from '../date_utils';
+import { animateSVG, createSVG } from '../svg_utils';
+import { InternalItem } from '../types';
 import Arrow from './arrow';
-import date_utils from './date_utils';
-import { animateSVG, createSVG } from './svg_utils';
-import { InternalTask } from './types';
 
 export default class Bar {
     private _gantt: Gantt;
-    private _task: InternalTask;
+    private _item: InternalItem;
     private _bar_group: SVGGElement;
     private _handle_group: SVGGElement;
     private _group: SVGGElement;
@@ -16,14 +16,14 @@ export default class Bar {
     private _width: number;
     private _corner_radius: number;
     private _duration: number;
-    private _$bar: SVGGraphicsElement;
+    private _$bar: SVGRectElement;
     private _x: number;
     private _y: number;
-    private _$date_highlight: HTMLElement;
+    // private _$date_highlight: HTMLElement;
     private _arrows: Arrow[];
 
-    constructor(gantt: Gantt, task: InternalTask) {
-        this.set_defaults(gantt, task);
+    constructor(gantt: Gantt, item: InternalItem) {
+        this.set_defaults(gantt, item);
         this.prepare_wrappers();
         this.refresh();
     }
@@ -31,8 +31,8 @@ export default class Bar {
     refresh() {
         this._bar_group.innerHTML = '';
         this._handle_group.innerHTML = '';
-        if (this._task.custom_class) {
-            this._group.classList.add(this._task.custom_class);
+        if (this._item.custom_class) {
+            this._group.classList.add(this._item.custom_class);
         } else {
             this._group.classList.remove(...this._group.classList);
             this._group.classList.add('bar-wrapper');
@@ -42,9 +42,9 @@ export default class Bar {
         this.draw();
     }
 
-    set_defaults(gantt: Gantt, task: InternalTask) {
+    set_defaults(gantt: Gantt, item: InternalItem) {
         this._gantt = gantt;
-        this._task = task;
+        this._item = item;
         this._name = this._name || '';
     }
 
@@ -52,8 +52,8 @@ export default class Bar {
         this._group = createSVG('g', {
             class:
                 'bar-wrapper' +
-                (this._task.custom_class ? ' ' + this._task.custom_class : ''),
-            'data-id': this._task.id,
+                (this._item.custom_class ? ' ' + this._item.custom_class : ''),
+            'data-id': this._item.id,
         }) as SVGGElement;
         this._bar_group = createSVG('g', {
             class: 'bar-group',
@@ -67,62 +67,72 @@ export default class Bar {
 
     prepare_values() {
         this._height = this._gantt.options.bar_height!;
+        if (this._item.type == 'disabled')
+            this._height += this._gantt.options.padding!;
         this._image_size = this._height - 5;
-        this._task._start = new Date(this._task._start);
-        this._task._end = new Date(this._task._end);
+        this._item._start = new Date(this._item._start);
+        this._item._end = new Date(this._item._end);
         this.compute_x();
         this.compute_y();
         this.compute_duration();
         this._corner_radius = this._gantt.options.bar_corner_radius!;
         this._width = this._gantt.config.column_width * this._duration;
-        if (!this._task.progress || this._task.progress < 0)
-            this._task.progress = 0;
-        if (this._task.progress > 100) this._task.progress = 100;
     }
 
     draw() {
         this.draw_bar();
         this.draw_label();
 
-        if (this._task.thumbnail) {
+        if (this._item.thumbnail) {
             this.draw_thumbnail();
         }
 
         // bind click event
         this._$bar.addEventListener('click', () => {
-            this._gantt.emit('bar-click', { task: this._task });
+            this._gantt.emit('bar-click', { task: this._item });
         });
     }
 
     draw_bar() {
-        this._$bar = createSVG('rect', {
-            x: this._x,
-            y: this._y,
-            width: this._width,
-            height: this._height,
-            rx: this._corner_radius,
-            ry: this._corner_radius,
-            class: 'bar',
-            append_to: this._bar_group,
-        });
-        if (this._task.color) this._$bar.style.fill = this._task.color;
-        animateSVG(this._$bar, 'width', 0, this._width);
-
-        if (this._task.invalid) {
-            this._$bar.classList.add('bar-invalid');
+        switch (this._item.type) {
+            case 'disabled':
+                this._$bar = createSVG('rect', {
+                    x: this._x,
+                    y: this._y,
+                    width: this._width,
+                    height: this._height,
+                    append_to: this._bar_group,
+                    class: 'bar',
+                }) as SVGRectElement;
+                this._$bar.style.fill = 'url(#diagonalHatch)';
+                break;
+            case 'task':
+            default:
+                this._$bar = createSVG('rect', {
+                    x: this._x,
+                    y: this._y,
+                    width: this._width,
+                    height: this._height,
+                    rx: this._corner_radius,
+                    ry: this._corner_radius,
+                    class: 'bar',
+                    append_to: this._bar_group,
+                }) as SVGRectElement;
+                if (this._item.color) this._$bar.style.fill = this._item.color;
         }
+        animateSVG(this._$bar, 'width', 0, this._width);
     }
 
     draw_label() {
         let x_coord = this._x + this._$bar.getWidth() / 2;
 
-        if (this._task.thumbnail) {
+        if (this._item.thumbnail) {
             x_coord = this._x + this._image_size + 5;
         }
 
-        let label = this._task.name;
+        let label = this._item.name;
         if (typeof this._gantt.options.bar_config!.get_label === 'function') {
-            label = this._gantt.options.bar_config!.get_label(this._task);
+            label = this._gantt.options.bar_config!.get_label(this._item);
         }
 
         createSVG('text', {
@@ -147,7 +157,7 @@ export default class Bar {
         });
 
         createSVG('rect', {
-            id: 'rect_' + this._task.id,
+            id: 'rect_' + this._item.id,
             x: this._x + x_offset,
             y: this._y + y_offset,
             width: this._image_size,
@@ -158,12 +168,12 @@ export default class Bar {
         });
 
         clipPath = createSVG('clipPath', {
-            id: 'clip_' + this._task.id,
+            id: 'clip_' + this._item.id,
             append_to: defs,
         });
 
         createSVG('use', {
-            href: '#rect_' + this._task.id,
+            href: '#rect_' + this._item.id,
             append_to: clipPath,
         });
 
@@ -173,36 +183,36 @@ export default class Bar {
             width: this._image_size,
             height: this._image_size,
             class: 'bar-img',
-            href: this._task.thumbnail,
-            clipPath: 'clip_' + this._task.id,
+            href: this._item.thumbnail,
+            clipPath: 'clip_' + this._item.id,
             append_to: this._bar_group,
         });
     }
 
-    update_bar_position({ x, width }: { x?: number; width?: number }) {
-        const bar = this._$bar;
+    // update_bar_position({ x, width }: { x?: number; width?: number }) {
+    //     const bar = this._$bar;
 
-        if (x) {
-            const xs = this._task.dependencies.map((dep) => {
-                return this._gantt.get_bar(dep)!._$bar.getX();
-            });
-            const valid_x = xs.reduce((prev, curr) => {
-                return prev && x >= curr;
-            }, true);
-            if (!valid_x) return;
-            this.update_attr(bar, 'x', x);
-            this._x = x;
-            this._$date_highlight.style.left = x + 'px';
-        }
-        if (width && width > 0) {
-            this.update_attr(bar, 'width', width);
-            this._$date_highlight.style.width = width + 'px';
-        }
+    //     if (x) {
+    //         const xs = this._task.dependencies.map((dep) => {
+    //             return this._gantt.getBar(dep)!._$bar.getX();
+    //         });
+    //         const valid_x = xs.reduce((prev, curr) => {
+    //             return prev && x >= curr;
+    //         }, true);
+    //         if (!valid_x) return;
+    //         this.update_attr(bar, 'x', x);
+    //         this._x = x;
+    //         this._$date_highlight.style.left = x + 'px';
+    //     }
+    //     if (width && width > 0) {
+    //         this.update_attr(bar, 'width', width);
+    //         this._$date_highlight.style.width = width + 'px';
+    //     }
 
-        this.update_label_position();
-        this.compute_duration();
-        this.update_arrow_position();
-    }
+    //     this.update_label_position();
+    //     this.compute_duration();
+    //     this.update_arrow_position();
+    // }
 
     update_label_position_on_horizontal_scroll({
         x,
@@ -246,7 +256,7 @@ export default class Bar {
 
     compute_x() {
         const { column_width } = this._gantt.config;
-        const task_start = this._task._start;
+        const task_start = this._item._start;
         const gantt_start = this._gantt.ganttStart;
 
         const diff =
@@ -267,17 +277,23 @@ export default class Bar {
     }
 
     compute_y() {
+        const padding =
+            this._item.type == 'disabled'
+                ? 0
+                : this._gantt.options.padding! / 2;
         this._y =
             this._gantt.config.header_height +
-            this._gantt.options.padding! / 2 +
-            this._task._index * (this._height + this._gantt.options.padding!);
+            padding +
+            this._item._index *
+                (this._gantt.options.bar_height! +
+                    this._gantt.options.padding!);
     }
 
     compute_duration() {
         this._duration =
             date_utils.diff(
-                this._task._end,
-                this._task._start,
+                this._item._end,
+                this._item._start,
                 this._gantt.config.unit,
             ) / this._gantt.config.step;
 
@@ -289,13 +305,13 @@ export default class Bar {
         }
     }
 
-    update_attr(element: SVGGraphicsElement, attr: string, value: any) {
-        value = +value;
-        if (!isNaN(value)) {
-            element.setAttribute(attr, value);
-        }
-        return element;
-    }
+    // update_attr(element: SVGGraphicsElement, attr: string, value: any) {
+    //     value = +value;
+    //     if (!isNaN(value)) {
+    //         element.setAttribute(attr, value);
+    //     }
+    //     return element;
+    // }
 
     update_label_position() {
         const img_mask = this._bar_group.querySelector('.img_mask');
@@ -358,7 +374,7 @@ export default class Bar {
     }
 
     get task() {
-        return this._task;
+        return this._item;
     }
 
     get group() {

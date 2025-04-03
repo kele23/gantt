@@ -1,4 +1,4 @@
-import Bar from './bar';
+import Bar from './elements/bar';
 
 declare global {
     interface SVGElement {
@@ -12,12 +12,12 @@ declare global {
 
 export type BarConfig = {
     show_label_on_offset: boolean;
-    get_label?: (item: Task) => string;
+    get_label?: (item: Item) => string;
 };
 
 export type SidebarConfig = {
     sidebar_width: number;
-    get_label?: (item: TaskGroup) => string;
+    get_label?: (item: ItemGroup) => string;
 };
 
 export type HolidayObject = {
@@ -61,7 +61,7 @@ export type Options = {
     move_dependencies?: boolean;
     padding?: number;
     show_expected_progress?: boolean;
-    task_groups_enabled?: boolean;
+    groupsEnabled?: boolean;
     today_button?: boolean;
     upper_header_height?: number;
     view_mode_select?: boolean;
@@ -72,33 +72,36 @@ export type Options = {
 
 export type Locale = Record<string, string>;
 
-export type Task = {
+export type BasicItem = {
     id: string;
     end?: Date;
     start: Date;
     custom_class?: string;
     duration?: string;
     dependencies?: string | string[];
-    task_group_key?: string;
+    groupKey?: string;
     name: string;
-    progress?: number;
     thumbnail?: string;
-    color?: string;
-    color_progress?: string;
-    annotations?: string;
 };
 
-export type InternalTask = Task & {
+export type Item = BasicItem &
+    (
+        | {
+              color?: string;
+              type: 'task';
+          }
+        | { type: 'disabled' }
+    );
+
+export type InternalItem = Item & {
     _index: number;
     _start: Date;
     _end: Date;
     dependencies: string[];
     $bar: Bar;
-    invalid: boolean;
-    actual_duration?: number;
 };
 
-export type TaskGroup = {
+export type ItemGroup = {
     id: string;
     key: string;
     name: string;

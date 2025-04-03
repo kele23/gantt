@@ -126,7 +126,7 @@ const DEFAULT_OPTIONS: Options = {
     move_dependencies: true,
     padding: 18,
     show_expected_progress: false,
-    task_groups_enabled: false,
+    groupsEnabled: false,
     today_button: true,
     upper_header_height: 45,
     view_mode_select: false,

@@ -36,43 +36,58 @@
             }
 
             const daysSince = (dx) => new Date(today + dx * 86400000);
-            let tasks = [
+            let items = [
                 {
                     start: daysSince(-2),
                     end: daysSince(2),
                     name: 'Michele Scala',
                     id: 'Task 0',
-                    task_group_key: 'CA222ZF',
+                    groupKey: 'CA222ZF',
+                    dependencies: 'Task 2',
+                    type: 'task',
                 },
                 {
                     start: daysSince(3),
                     duration: '6d',
                     name: 'Filippo Didone',
                     id: 'Task 1',
-                    task_group_key: 'HQ222GF',
+                    groupKey: 'HQ222GF',
                     color: '#880000',
+                    type: 'task',
                 },
                 {
                     start: daysSince(4),
                     duration: '2d',
                     name: 'Alerto Falezza',
                     id: 'Task 2',
-                    task_group_key: 'PO765AF',
+                    groupKey: 'PO765AF',
                     color: '#33ff00',
+                    type: 'task',
                 },
                 {
                     start: daysSince(-4),
                     end: daysSince(0),
                     name: 'Luca Maggiolo',
                     id: 'Task 3',
-                    task_group_key: 'AB123ZF',
+                    groupKey: 'AB123ZF',
+                    type: 'task',
                 },
                 {
                     start: daysSince(20),
                     end: daysSince(24),
                     name: 'Daniele Righetti',
                     id: 'Task 5',
-                    task_group_key: 'AB123ZF',
+                    groupKey: 'AB123ZF',
+                    type: 'task',
+                },
+                {
+                    start: daysSince(2),
+                    end: daysSince(8),
+                    name: 'Test disabled',
+                    id: 'Task 7',
+                    groupKey: '221sss',
+                    color: '#880000',
+                    type: 'disabled',
                 },
             ];
 
@@ -96,14 +111,14 @@
                 },
                 {
                     id: '4',
-                    key: '4',
+                    key: 'AB123ZF',
                     name: 'AB123ZF',
                     text: 'Questo è un test',
                     thumbnail: 'https://placehold.co/48x48',
                 },
                 {
                     id: '5',
-                    key: '5',
+                    key: '221sss',
                     name: '5',
                     text: 'Questo è un test',
                     thumbnail: 'https://placehold.co/48x48',
@@ -152,13 +167,16 @@
                 },
             ];
 
-            const mutablity = new Gantt('#mutability', tasks, {}, groups);
+            const mutablity = new Gantt('#mutability', {
+                elements: items,
+                elementGroups: groups,
+            });
 
             // setTimeout(() => {
-            mutablity.update_options({
+            mutablity.updateOptions({
                 language: 'it',
                 view_mode_select: true,
-                task_groups_enabled: true,
+                groupsEnabled: true,
                 container_height: '80vh',
                 readonly: true,
                 auto_move_label: false,
