@@ -67,8 +67,6 @@ export default class Bar {
 
     prepare_values() {
         this._height = this._gantt.options.bar_height!;
-        if (this._item.type == 'disabled')
-            this._height += this._gantt.options.padding!;
         this._image_size = this._height - 5;
         this._item._start = new Date(this._item._start);
         this._item._end = new Date(this._item._end);
@@ -277,13 +275,9 @@ export default class Bar {
     }
 
     compute_y() {
-        const padding =
-            this._item.type == 'disabled'
-                ? 0
-                : this._gantt.options.padding! / 2;
         this._y =
             this._gantt.config.header_height +
-            padding +
+            this._gantt.options.padding! / 2 +
             this._item._index *
                 (this._gantt.options.bar_height! +
                     this._gantt.options.padding!);
