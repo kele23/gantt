@@ -19,8 +19,8 @@ export default class Bar {
     private _$bar: SVGRectElement;
     private _x: number;
     private _y: number;
-    // private _$date_highlight: HTMLElement;
     private _arrows: Arrow[];
+    private _hoverTimeout: any;
 
     constructor(gantt: Gantt, item: InternalItem) {
         this.set_defaults(gantt, item);
@@ -88,6 +88,22 @@ export default class Bar {
         // bind click event
         this._$bar.addEventListener('click', () => {
             this._gantt.emit('bar-click', { task: this._item });
+        });
+
+        // mouseover
+        this._$bar.addEventListener('mouseenter', (e) => {
+            this._hoverTimeout = setTimeout(() => {
+                this._gantt.showPopup(this);
+                this._hoverTimeout = undefined;
+            }, 1000);
+        });
+        this._$bar.addEventListener('mouseleave', () => {
+            if (this._hoverTimeout) {
+                clearTimeout(this._hoverTimeout);
+                return;
+            }
+
+            this._gantt.hidePopup();
         });
     }
 
@@ -187,31 +203,6 @@ export default class Bar {
         });
     }
 
-    // update_bar_position({ x, width }: { x?: number; width?: number }) {
-    //     const bar = this._$bar;
-
-    //     if (x) {
-    //         const xs = this._task.dependencies.map((dep) => {
-    //             return this._gantt.getBar(dep)!._$bar.getX();
-    //         });
-    //         const valid_x = xs.reduce((prev, curr) => {
-    //             return prev && x >= curr;
-    //         }, true);
-    //         if (!valid_x) return;
-    //         this.update_attr(bar, 'x', x);
-    //         this._x = x;
-    //         this._$date_highlight.style.left = x + 'px';
-    //     }
-    //     if (width && width > 0) {
-    //         this.update_attr(bar, 'width', width);
-    //         this._$date_highlight.style.width = width + 'px';
-    //     }
-
-    //     this.update_label_position();
-    //     this.compute_duration();
-    //     this.update_arrow_position();
-    // }
-
     update_label_position_on_horizontal_scroll({
         x,
         sx,
@@ -298,14 +289,6 @@ export default class Bar {
         }
     }
 
-    // update_attr(element: SVGGraphicsElement, attr: string, value: any) {
-    //     value = +value;
-    //     if (!isNaN(value)) {
-    //         element.setAttribute(attr, value);
-    //     }
-    //     return element;
-    // }
-
     update_label_position() {
         const img_mask = this._bar_group.querySelector('.img_mask');
         const bar = this._$bar,
@@ -366,7 +349,7 @@ export default class Bar {
         this._arrows = arrows;
     }
 
-    get task() {
+    get item() {
         return this._item;
     }
 

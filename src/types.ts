@@ -13,6 +13,7 @@ declare global {
 export type BarConfig = {
     show_label_on_offset: boolean;
     get_label?: (item: Item) => string;
+    get_popup?: (item: Item) => string;
 };
 
 export type SidebarConfig = {
@@ -74,10 +75,9 @@ export type Locale = Record<string, string>;
 
 export type BasicItem = {
     id: string;
-    end?: Date;
+    end: Date;
     start: Date;
     custom_class?: string;
-    duration?: string;
     dependencies?: string | string[];
     groupKey?: string;
     name: string;
@@ -107,6 +107,7 @@ export type ItemGroup = {
     name: string;
     thumbnail?: string;
     text?: string;
+    color?: string;
 };
 
 export type DateInfo = {

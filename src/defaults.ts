@@ -109,17 +109,20 @@ const DEFAULT_OPTIONS: Options = {
     bar_height: 30,
     bar_config: {
         show_label_on_offset: true,
+        get_popup: (item) => {
+            return `<div>${date_utils.format(item.start, 'yyyy-MM-dd HH:mm')}</div>`;
+        },
     },
     base_z_index: 10,
     container_height: 'auto',
     column_width: undefined,
-    date_format: 'YYYY-MM-DD HH:mm',
+    date_format: 'yyyy-MM-dd HH:mm',
     enable_left_sidebar_list: false,
     sidebar_config: {
         sidebar_width: 200,
         get_label: (item) => {
             return `
-                <div class="tw:flex tw:gap-2 tw:pl-4 tw:h-full tw:cursor-pointer tw:bg-white tw:hover:bg-gray-100 tw:py-1">
+                <div class="tw:flex tw:gap-2 tw:pl-4 tw:h-full tw:cursor-pointer  tw:hover:bg-gray-200/50 tw:py-1">
                     ${item.thumbnail ? `<img class="tw:block tw:w-auto tw:h-[40px]" src="${item.thumbnail}" alt="thumb"/>` : ''}
                     <div class="tw:flex tw:flex-col tw:justify-center tw:h-[40px]"><span class="tw:font-bold tw:text-[14px]">${item.name}</span> ${item.text ? `<span class="tw:text-[12px]">${item.text}</span>` : ''}</div>
                 </div>    

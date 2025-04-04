@@ -40,7 +40,8 @@ export class Gantt extends EventEmitter {
         bar: SVGGElement;
         arrow: SVGGElement;
         grid: SVGGraphicsElement;
-        progress: SVGGElement;
+        topper: SVGGElement;
+        popup: SVGForeignObjectElement;
     };
     private _$extras: HTMLElement;
     private _$adjust: HTMLElement;
@@ -194,7 +195,7 @@ export class Gantt extends EventEmitter {
         //@ts-ignore: After is set
         const item: InternalItem = { ...oele };
 
-        if (!item.start) {
+        if (!item.start || !item.end) {
             console.error(
                 gettext('task_no_start_date', this._options.language!, {
                     id: item.id || '',
@@ -204,21 +205,7 @@ export class Gantt extends EventEmitter {
         }
 
         item._start = item.start;
-        if (item.end) {
-            item._end = item.end;
-        } else if (item.duration !== undefined) {
-            let { duration, scale } = date_utils.parse_duration(item.duration);
-            item._end = date_utils.add(item._start, duration, scale);
-        }
-
-        if (!item._end) {
-            console.error(
-                gettext('task_no_end_date', this._options.language!, {
-                    id: item.id || '',
-                }),
-            );
-            return;
-        }
+        item._end = item.end;
 
         let diff = date_utils.diff(item._end, item._start, 'year');
         if (diff < 0) {
@@ -621,6 +608,7 @@ export class Gantt extends EventEmitter {
             },
             { passive: true },
         );
+
         this._$svg.addEventListener(
             'mouseleave',
             (e) => {
@@ -660,6 +648,7 @@ export class Gantt extends EventEmitter {
                         </pattern>`,
         });
 
+        // create
         this._layers = {
             grid: createSVG('g', {
                 class: 'grid',
@@ -669,20 +658,26 @@ export class Gantt extends EventEmitter {
                 class: 'arrow',
                 append_to: this._$svg,
             }) as SVGGElement,
-            progress: createSVG('g', {
-                class: 'progress',
-                append_to: this._$svg,
-            }) as SVGGElement,
             bar: createSVG('g', {
                 class: 'bar',
                 append_to: this._$svg,
             }) as SVGGElement,
+            topper: createSVG('g', {
+                class: 'topper',
+                append_to: this._$svg,
+            }) as SVGGElement,
+            popup: createSVG('foreignObject', {
+                class: 'popup tw:pointer-events-none tw:opacity-0 tw:transition-opacity tw:p-[8px] tw:bg-white tw:shadow-lg tw:rounded',
+                append_to: this._$svg,
+            }) as SVGForeignObjectElement,
         };
 
         this._$extras = createEl({
             classes: 'extras',
             append_to: this._$main_wrapper,
         });
+
+        // add adjust
         this._$adjust = createEl({
             classes: 'adjust tw:hide',
             append_to: this._$extras,
@@ -706,7 +701,7 @@ export class Gantt extends EventEmitter {
     }
 
     private _makeGridBackground() {
-        const grid_width = this._dates.length * this._config.column_width;
+        // const grid_width = this._dates.length * this._config.column_width;
         const sidebar_list_items = this._options.groupsEnabled
             ? this._groups
             : this._items;
@@ -729,18 +724,19 @@ export class Gantt extends EventEmitter {
         );
         this._grid_height = grid_height;
 
-        createSVG('rect', {
-            x: 0,
-            y: 0,
-            width: grid_width,
-            height: grid_height,
-            class: 'grid-background',
-            append_to: this._$svg,
-        });
+        // createSVG('rect', {
+        //     x: 0,
+        //     y: 0,
+        //     width: grid_width,
+        //     height: grid_height,
+        //     class: 'grid-background',
+        //     append_to: this._$svg,
+        // });
 
         $.attr(this._$svg, {
             height: grid_height,
             width: '100%',
+            fill: 'white',
         });
     }
 
@@ -1032,7 +1028,7 @@ export class Gantt extends EventEmitter {
             x: left,
             height: '100%',
             width: 1,
-            append_to: this._$svg,
+            append_to: this._layers.topper,
             fill: '#000000',
         });
     }
@@ -1167,9 +1163,12 @@ export class Gantt extends EventEmitter {
                 width: width,
                 height: height,
                 innerHTML: innerHtml,
-                class: 'gantt-sidebar-row tw:border-b tw:border-gray-100',
+                class: 'gantt-sidebar-row tw:border-b tw:border-gray-100 tw:bg-white',
                 append_to: this._$sidebar,
             });
+
+            if (item.color)
+                obj.setAttribute('style', `background: ${item.color}`);
 
             // bind click event
             obj.addEventListener('click', () => {
@@ -1344,6 +1343,28 @@ export class Gantt extends EventEmitter {
         return this._groups.find((group) => group.key === element.groupKey);
     }
 
+    showPopup(bar: Bar) {
+        if (!this._options.bar_config?.get_popup) return;
+        const html = this._options.bar_config.get_popup(bar.item);
+        if (!html) return;
+
+        const rect = bar.group.getBBox();
+        const x = rect.x;
+        const y = rect.y + rect.height + 6;
+
+        this._layers.popup.innerHTML = html;
+        this._layers.popup.setAttribute('y', `${y}`);
+        this._layers.popup.setAttribute('x', `${x}`);
+        this._layers.popup.setAttribute('width', `240`);
+        this._layers.popup.setAttribute('height', `140`);
+
+        this._layers.popup.classList.remove('tw:opacity-0');
+    }
+
+    hidePopup() {
+        this._layers.popup.classList.add('tw:opacity-0');
+    }
+
     /**
      * Clear all elements from the parent svg element
      *
@@ -1370,5 +1391,9 @@ export class Gantt extends EventEmitter {
 
     get ganttStart() {
         return this._gantt_start;
+    }
+
+    get extras() {
+        return this._$extras;
     }
 }
