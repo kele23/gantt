@@ -110,7 +110,10 @@ const DEFAULT_OPTIONS: Options = {
     bar_config: {
         show_label_on_offset: true,
         get_popup: (item) => {
-            return `<div>${date_utils.format(item.start, 'yyyy-MM-dd HH:mm')}</div>`;
+            return `<div class="tw:flex tw:flex-col tw:gap-2 tw:p-4 tw:justify-center">
+                <div class="tw:text-[16px] tw:leading-[1.2em]">From: </br><b>${date_utils.format(item.start, 'yyyy-MM-dd HH:mm')}</b></div>
+                <div class="tw:text-[16px] tw:leading-[1.2em]">To: </br><b>${date_utils.format(item.end, 'yyyy-MM-dd HH:mm')}</b></div>
+            </div>`;
         },
     },
     base_z_index: 10,
