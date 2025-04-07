@@ -91,7 +91,7 @@ export default class Bar {
         });
 
         // mouseover
-        this._$bar.addEventListener('mouseenter', (e) => {
+        this._$bar.addEventListener('mouseenter', () => {
             this._hoverTimeout = setTimeout(() => {
                 this._gantt.showPopup(this);
                 this._hoverTimeout = undefined;
