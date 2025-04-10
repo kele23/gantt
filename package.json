@@ -1,6 +1,6 @@
 {
     "name": "@kele23/gantt",
-    "version": "0.1.10",
+    "version": "0.1.11",
     "description": "A simple, modern, interactive gantt library for the web based on Frappe Gantt",
     "main": "src/index.js",
     "type": "module",
@@ -26,10 +26,10 @@
             "require": "./dist/gantt.umd.js",
             "import": "./dist/gantt.es.js",
             "style": "./dist/gantt.css",
-            "types": "./dist/gantt.d.ts"
+            "types": "./dist/index.d.ts"
         }
     },
-    "types": "./dist/gantt.d.ts",
+    "types": "./dist/index.d.ts",
     "keywords": [
         "gantt",
         "svg",
