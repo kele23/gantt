@@ -13,7 +13,9 @@ declare global {
 export type BarConfig = {
     show_label_on_offset: boolean;
     get_label?: (item: Item) => string;
-    get_popup?: (item: Item) => string;
+    get_popup?: (item: Item, lang?: string) => string | HTMLElement;
+    popupWidth: string | number;
+    popupHeight: string | number;
 };
 
 export type SidebarConfig = {

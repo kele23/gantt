@@ -1345,19 +1345,32 @@ export class Gantt extends EventEmitter {
 
     showPopup(bar: Bar) {
         if (!this._options.bar_config?.get_popup) return;
-        const html = this._options.bar_config.get_popup(bar.item);
-        if (!html) return;
+        const htmlOrEl = this._options.bar_config.get_popup(
+            bar.item,
+            this._options.language,
+        );
+        if (!htmlOrEl) return;
 
         const rect = bar.group.getBBox();
         const x = rect.x;
         const y = rect.y + rect.height + 6;
 
-        this._layers.popup.innerHTML = html;
+        // put elements inside popup
+        if (htmlOrEl instanceof HTMLElement)
+            this._layers.popup.replaceChildren(htmlOrEl);
+        else this._layers.popup.innerHTML = htmlOrEl;
+
+        // set attributes
         this._layers.popup.setAttribute('y', `${y}`);
         this._layers.popup.setAttribute('x', `${x}`);
-        this._layers.popup.setAttribute('width', `240`);
-        this._layers.popup.setAttribute('height', `140`);
+        let width = this._options.bar_config.popupWidth;
+        width = typeof width == 'string' ? width : `${width}px`;
+        let height = this._options.bar_config.popupHeight;
+        height = typeof height == 'string' ? height : `${height}px`;
+        this._layers.popup.setAttribute('width', width);
+        this._layers.popup.setAttribute('height', height);
 
+        // view popup
         this._layers.popup.classList.remove('tw:opacity-0');
     }
 
