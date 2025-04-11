@@ -4,7 +4,7 @@ import { DEFAULT_OPTIONS } from './defaults';
 import Arrow from './elements/arrow';
 import Bar from './elements/bar';
 import { addLocales, gettext } from './i18n';
-import { $, createSVG } from './svg_utils';
+import { createSVG } from './svg_utils';
 import {
     DateInfo,
     GanttConfig,
@@ -724,20 +724,9 @@ export class Gantt extends EventEmitter {
         );
         this._grid_height = grid_height;
 
-        // createSVG('rect', {
-        //     x: 0,
-        //     y: 0,
-        //     width: grid_width,
-        //     height: grid_height,
-        //     class: 'grid-background',
-        //     append_to: this._$svg,
-        // });
-
-        $.attr(this._$svg, {
-            height: grid_height,
-            width: '100%',
-            fill: 'white',
-        });
+        this._$svg.setAttribute('fill', 'white');
+        this._$svg.setAttribute('width', '100%');
+        this._$svg.setAttribute('height', `${grid_height}`);
     }
 
     private _makeGridRows() {

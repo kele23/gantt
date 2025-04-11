@@ -112,8 +112,8 @@ const DEFAULT_OPTIONS: Options = {
         show_label_on_offset: true,
         get_popup: (item, lang?: string) => {
             return `<div class="tw:flex tw:flex-col tw:gap-2 tw:p-4 tw:justify-center">
-                <div class="tw:text-[16px] tw:leading-[1.2em]">${translate('From', lang)}: </br><b>${date_utils.format(item.start, 'yyyy-MM-dd HH:mm')}</b></div>
-                <div class="tw:text-[16px] tw:leading-[1.2em]">${translate('To', lang)}: </br><b>${date_utils.format(item.end, 'yyyy-MM-dd HH:mm')}</b></div>
+                <div class="tw:text-[16px] tw:leading-[1.2em]">${translate('From', lang)}: </br><b>${date_utils.format(item.start, 'HH:mm dd MMMM yyyy', lang)}</b></div>
+                <div class="tw:text-[16px] tw:leading-[1.2em]">${translate('To', lang)}: </br><b>${date_utils.format(item.end, 'HH:mm dd MMMM yyyy', lang)}</b></div>
             </div>`;
         },
         popupHeight: 140,

@@ -91,66 +91,6 @@ function cubic_bezier(name: string) {
     }[name];
 }
 
-$.on = (
-    element: SVGGraphicsElement,
-    event: string,
-    selector: string | ((e?: Event, handle?: Element) => void),
-    callback?: (e?: Event, handle?: Element) => void,
-) => {
-    if (!callback) {
-        //@ts-ignore: it works
-        callback = selector;
-        $.bind(element, event, callback!);
-    } else if (typeof selector == 'string') {
-        $.delegate(element, event, selector, callback);
-    }
-};
-
-$.off = (element: SVGGraphicsElement, event: string, handler: () => void) => {
-    element.removeEventListener(event, handler);
-};
-
-$.bind = (
-    element: SVGGraphicsElement,
-    event: string,
-    callback: (e?: Event, handle?: Element) => void,
-) => {
-    event.split(/\s+/).forEach(function (event) {
-        element.addEventListener(event, callback);
-    });
-};
-
-$.delegate = (
-    element: SVGGraphicsElement,
-    event: string,
-    selector: string,
-    callback: (e?: Event, handle?: Element) => void,
-) => {
-    element.addEventListener(event, function (e) {
-        const target = e.target as Element;
-        const delegatedTarget = target.closest(selector);
-        if (delegatedTarget) {
-            //@ts-ignore: ignore
-            e.delegatedTarget = delegatedTarget;
-            //@ts-ignore: ignore
-            callback.call(this, e, delegatedTarget);
-        }
-    });
-};
-
-$.closest = (
-    selector: string,
-    element?: SVGGraphicsElement,
-): SVGGraphicsElement | undefined => {
-    if (!element) return undefined;
-
-    if (element.matches(selector)) {
-        return element;
-    }
-    const pnode = element.parentNode || undefined;
-    return $.closest(selector, pnode as SVGGraphicsElement);
-};
-
 $.attr = (
     element: SVGElement,
     attr: string | Record<string, any>,
