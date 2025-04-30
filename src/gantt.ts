@@ -667,7 +667,7 @@ export class Gantt extends EventEmitter {
                 append_to: this._$svg,
             }) as SVGGElement,
             popup: createSVG('foreignObject', {
-                class: 'popup tw:pointer-events-none tw:opacity-0 tw:transition-opacity tw:p-[8px] tw:bg-white tw:shadow-lg tw:rounded',
+                class: 'popup tw:pointer-events-none tw:opacity-0 tw:transition-opacity tw:bg-white tw:shadow-lg tw:rounded',
                 append_to: this._$svg,
             }) as SVGForeignObjectElement,
         };

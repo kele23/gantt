@@ -110,6 +110,8 @@ export type ItemGroup = {
     thumbnail?: string;
     text?: string;
     color?: string;
+    stamp?: string;
+    title?: string;
 };
 
 export type DateInfo = {

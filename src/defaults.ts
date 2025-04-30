@@ -111,12 +111,13 @@ const DEFAULT_OPTIONS: Options = {
     bar_config: {
         show_label_on_offset: true,
         get_popup: (item, lang?: string) => {
-            return `<div class="tw:flex tw:flex-col tw:gap-2 tw:p-4 tw:justify-center">
-                <div class="tw:text-[16px] tw:leading-[1.2em]">${translate('From', lang)}: </br><b>${date_utils.format(item.start, 'HH:mm dd MMMM yyyy', lang)}</b></div>
-                <div class="tw:text-[16px] tw:leading-[1.2em]">${translate('To', lang)}: </br><b>${date_utils.format(item.end, 'HH:mm dd MMMM yyyy', lang)}</b></div>
+            return `<div class="tw:flex tw:flex-col tw:gap-2 tw:p-2 tw:justify-center">
+                <div class="tw:text-[16px] tw:leading-[1.2em]"><b>${item.name}</b></div>
+                <div class="tw:text-[16px] tw:leading-[1.2em]">${translate('From', lang)}: ${date_utils.format(item.start, 'dd MMMM yyyy - HH:mm', lang)}</div>
+                <div class="tw:text-[16px] tw:leading-[1.2em]">${translate('To', lang)}: ${date_utils.format(item.end, 'dd MMMM yyyy - HH:mm', lang)}</div>
             </div>`;
         },
-        popupHeight: 140,
+        popupHeight: 90,
         popupWidth: 240,
     },
     base_z_index: 10,
@@ -128,10 +129,11 @@ const DEFAULT_OPTIONS: Options = {
         sidebar_width: 200,
         get_label: (item) => {
             return `
-                <div class="tw:flex tw:gap-2 tw:pl-4 tw:h-full tw:cursor-pointer  tw:hover:bg-gray-200/50 tw:py-1">
-                    ${item.thumbnail ? `<img class="tw:block tw:w-auto tw:h-[40px]" src="${item.thumbnail}" alt="thumb"/>` : ''}
+                <button class="tw:flex tw:text-left tw:gap-2 tw:pl-4 tw:h-[48px] tw:cursor-pointer tw:relative  tw:hover:bg-gray-200/50 tw:py-1 tw:box-border tw:w-full tw:bg-transparent tw:outline-0 tw:border-0" title="${item.title || item.name}">
+                    ${item.thumbnail ? `<img class="tw:block tw:object-contain tw:h-[40px] tw:w-[40px]" src="${item.thumbnail}" alt="thumb"/>` : ''}
                     <div class="tw:flex tw:flex-col tw:justify-center tw:h-[40px]"><span class="tw:font-bold tw:text-[14px]">${item.name}</span> ${item.text ? `<span class="tw:text-[12px]">${item.text}</span>` : ''}</div>
-                </div>    
+                    ${item.stamp ? `<span class="tw:absolute tw:rounded-full tw:w-[16px] tw:h-[16px] tw:top-1/2 tw:-translate-y-1/2 tw:right-2 tw:shadow" style="background-color: ${item.stamp}"></span>` : ''}
+                </button>    
             `;
         },
     },
