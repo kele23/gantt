@@ -20,11 +20,14 @@ export default class Arrow {
 
     calculate_path() {
         let start_x =
-            this._from.$bar.bar.getBBox().x + this._from.$bar.bar.getBBox().width / 2;
+            this._from.$bar.bar.getBBox().x +
+            this._from.$bar.bar.getBBox().width / 2;
 
         const condition = () =>
-            this._to.$bar.bar.getBBox().x < start_x + this._gantt.options.padding! &&
-            start_x > this._from.$bar.bar.getBBox().x + this._gantt.options.padding!;
+            this._to.$bar.bar.getBBox().x <
+                start_x + this._gantt.options.padding! &&
+            start_x >
+                this._from.$bar.bar.getBBox().x + this._gantt.options.padding!;
 
         while (condition()) {
             start_x -= 10;
