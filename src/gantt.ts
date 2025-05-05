@@ -597,9 +597,11 @@ export class Gantt extends EventEmitter {
                 this._$colHighlighter.setAttribute('x', `${p}`);
 
                 // handle row highlight
-                const row = target.closest('.gantt-sidebar-row') as SVGElement;
+                const row = target.closest(
+                    '.gantt-sidebar-row',
+                ) as SVGGraphicsElement;
                 if (row) {
-                    const y = row.getY();
+                    const y = row.getBBox().y;
                     this._$rowHighlighter?.classList.remove('tw:opacity-0');
                     this._$rowHighlighter?.setAttribute('y', `${y}`);
                 } else {
@@ -1320,6 +1322,34 @@ export class Gantt extends EventEmitter {
         return this._items.find((element) => {
             return element.id === id;
         });
+    }
+
+    intersectBars(element: SVGGraphicsElement) {
+        return (
+            this._items.find((item: InternalItem) => {
+                const a = item.$bar.bar;
+                const b = element;
+
+                const aBox = a.getBBox();
+                const bBox = b.getBBox();
+
+                // no horizontal overlap
+                if (
+                    aBox.x >= bBox.x + bBox.width ||
+                    bBox.x >= aBox.x + aBox.width
+                )
+                    return false;
+
+                // no vertical overlap
+                if (
+                    aBox.y >= bBox.y + bBox.height ||
+                    bBox.y >= aBox.y + aBox.height
+                )
+                    return false;
+
+                return true;
+            })?.$bar != undefined
+        );
     }
 
     getBar(id: string) {

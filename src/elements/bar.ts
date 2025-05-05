@@ -138,7 +138,7 @@ export default class Bar {
     }
 
     draw_label() {
-        let x_coord = this._x + this._$bar.getWidth() / 2;
+        let x_coord = this._x + this._$bar.getBBox().width / 2;
 
         if (this._item.thumbnail) {
             x_coord = this._x + this._image_size + 5;
@@ -215,9 +215,9 @@ export default class Bar {
         const img = this._group.querySelector('.bar-img') as SVGGElement;
         const img_mask = this._bar_group.querySelector('.img_mask');
 
-        let barWidthLimit = this._$bar.getX() + this._$bar.getWidth();
-        let newLabelX = label.getX() + x;
-        let newImgX = (img && img.getX() + x) || 0;
+        let barWidthLimit = this._$bar.getBBox().x + this._$bar.getBBox().width;
+        let newLabelX = label.getBBox().x + x;
+        let newImgX = (img && img.getBBox().x + x) || 0;
         let imgWidth = (img && img.getBBox().width + 7) || 7;
         let labelEndX = newLabelX + label.getBBox().width + 7;
         let viewportCentral = sx + container.clientWidth / 2;
@@ -231,7 +231,7 @@ export default class Bar {
                 if (img_mask) img_mask.setAttribute('x', `${newImgX}`);
             }
         } else if (
-            newLabelX - imgWidth > this._$bar.getX() &&
+            newLabelX - imgWidth > this._$bar.getBBox().x &&
             x < 0 &&
             labelEndX > viewportCentral
         ) {
@@ -298,23 +298,35 @@ export default class Bar {
         let padding = 5;
         let x_offset_label_img = this._image_size + 10;
         const labelWidth = label.getBBox().width;
-        const barWidth = bar.getWidth();
+        const barWidth = bar.getBBox().width;
+
         if (labelWidth > barWidth) {
             if (this._gantt.options.bar_config!.show_label_on_offset) {
                 label.classList.add('big');
                 if (img) {
-                    img.setAttribute('x', `${bar.getEndX() + padding}`);
+                    img.setAttribute(
+                        'x',
+                        `${bar.getBBox().x + bar.getBBox().width + padding}`,
+                    );
                     if (img_mask)
                         img_mask.setAttribute(
                             'x',
-                            `${bar.getEndX() + padding}`,
+                            `${bar.getBBox().x + bar.getBBox().width + padding}`,
                         );
                     label.setAttribute(
                         'x',
-                        `${bar.getEndX() + x_offset_label_img}`,
+                        `${bar.getBBox().x + bar.getBBox().width + x_offset_label_img}`,
                     );
                 } else {
-                    label.setAttribute('x', `${bar.getEndX() + padding}`);
+                    label.setAttribute(
+                        'x',
+                        `${bar.getBBox().x + bar.getBBox().width + padding}`,
+                    );
+                }
+
+                //checkOverlay
+                if (this._gantt.intersectBars(label)) {
+                    label.style.display = 'none';
                 }
             } else {
                 label.style.display = 'none';
@@ -322,17 +334,17 @@ export default class Bar {
         } else {
             label.classList.remove('big');
             if (img) {
-                img.setAttribute('x', `${bar.getX() + padding}`);
+                img.setAttribute('x', `${bar.getBBox().x + padding}`);
                 if (img_mask)
-                    img_mask.setAttribute('x', `${bar.getX() + padding}`);
+                    img_mask.setAttribute('x', `${bar.getBBox().x + padding}`);
                 label.setAttribute(
                     'x',
-                    `${bar.getX() + barWidth / 2 + x_offset_label_img}`,
+                    `${bar.getBBox().x + barWidth / 2 + x_offset_label_img}`,
                 );
             } else {
                 label.setAttribute(
                     'x',
-                    `${bar.getX() + barWidth / 2 - labelWidth / 2}`,
+                    `${bar.getBBox().x + barWidth / 2 - labelWidth / 2}`,
                 );
             }
         }

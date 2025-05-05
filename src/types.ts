@@ -1,15 +1,5 @@
 import Bar from './elements/bar';
 
-declare global {
-    interface SVGElement {
-        getX(): number;
-        getY(): number;
-        getEndX(): number;
-        getHeight(): number;
-        getWidth(): number;
-    }
-}
-
 export type BarConfig = {
     show_label_on_offset: boolean;
     get_label?: (item: Item) => string;

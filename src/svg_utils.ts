@@ -109,23 +109,3 @@ $.attr = (
 
     element.setAttribute(attr, value);
 };
-
-const init = () => {
-    SVGGraphicsElement.prototype.getX = function () {
-        return +this.getAttribute('x')!;
-    };
-    SVGGraphicsElement.prototype.getY = function () {
-        return +this.getAttribute('y')!;
-    };
-    SVGGraphicsElement.prototype.getWidth = function () {
-        return +this.getAttribute('width')!;
-    };
-    SVGGraphicsElement.prototype.getHeight = function () {
-        return +this.getAttribute('height')!;
-    };
-    SVGGraphicsElement.prototype.getEndX = function () {
-        return this.getX() + this.getWidth();
-    };
-};
-
-init();
