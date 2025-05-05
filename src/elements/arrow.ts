@@ -20,11 +20,11 @@ export default class Arrow {
 
     calculate_path() {
         let start_x =
-            this._from.$bar.bar.getX() + this._from.$bar.bar.getWidth() / 2;
+            this._from.$bar.bar.getBBox().x + this._from.$bar.bar.getBBox().width / 2;
 
         const condition = () =>
-            this._to.$bar.bar.getX() < start_x + this._gantt.options.padding! &&
-            start_x > this._from.$bar.bar.getX() + this._gantt.options.padding!;
+            this._to.$bar.bar.getBBox().x < start_x + this._gantt.options.padding! &&
+            start_x > this._from.$bar.bar.getBBox().x + this._gantt.options.padding!;
 
         while (condition()) {
             start_x -= 10;
@@ -38,7 +38,7 @@ export default class Arrow {
                 this._from._index +
             this._gantt.options.padding! / 2;
 
-        let end_x = this._to.$bar.bar.getX() - 13;
+        let end_x = this._to.$bar.bar.getBBox().x - 13;
         let end_y =
             this._gantt.config.header_height +
             this._gantt.options.bar_height! / 2 +
@@ -53,8 +53,8 @@ export default class Arrow {
         let curve_y = from_is_below_to ? -curve : curve;
 
         if (
-            this._to.$bar.bar.getX() <=
-            this._from.$bar.bar.getX() + this._gantt.options.padding!
+            this._to.$bar.bar.getBBox().x <=
+            this._from.$bar.bar.getBBox().x + this._gantt.options.padding!
         ) {
             let down_1 = this._gantt.options.padding! / 2 - curve;
             if (down_1 < 0) {
@@ -63,11 +63,11 @@ export default class Arrow {
                 curve_y = from_is_below_to ? -curve : curve;
             }
             const down_2 =
-                this._to.$bar.bar.getY() +
-                this._to.$bar.bar.getHeight() / 2 -
+                this._to.$bar.bar.getBBox().y +
+                this._to.$bar.bar.getBBox().height / 2 -
                 curve_y;
             const left =
-                this._to.$bar.bar.getX() - this._gantt.options.padding!;
+                this._to.$bar.bar.getBBox().x - this._gantt.options.padding!;
             this._path = `
                 M ${start_x} ${start_y}
                 v ${down_1}
