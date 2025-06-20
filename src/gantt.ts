@@ -824,7 +824,10 @@ export class Gantt extends EventEmitter {
         }
 
         // Create hide sidebar
-        if (this._options.enable_left_sidebar_list) {
+        if (
+            this._options.enable_left_sidebar_list ||
+            this._options.groupsEnabled
+        ) {
             let $sidebar_button = document.createElement('button');
             $sidebar_button.classList.add('sidebar-button');
             $sidebar_button.textContent = gettext(
