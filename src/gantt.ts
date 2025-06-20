@@ -822,6 +822,21 @@ export class Gantt extends EventEmitter {
             };
             this._$side_header.prepend($today_button);
         }
+
+        // Create hide sidebar
+        if (this._options.enable_left_sidebar_list) {
+            let $sidebar_button = document.createElement('button');
+            $sidebar_button.classList.add('sidebar-button');
+            $sidebar_button.textContent = gettext(
+                'Sidebar',
+                this._options.language!,
+            );
+            $sidebar_button.onclick = () => {
+                this._$sidebar.style.display =
+                    this._$sidebar.style.display === 'none' ? 'block' : 'none';
+            };
+            this._$side_header.prepend($sidebar_button);
+        }
     }
 
     private _makeGridTicks() {
@@ -1108,7 +1123,7 @@ export class Gantt extends EventEmitter {
                 last_date,
                 this._options.language,
             ),
-            upper_y: 17,
+            upper_y: 16,
             lower_y: this._options.upper_header_height! + 5,
         };
     }
@@ -1125,6 +1140,8 @@ export class Gantt extends EventEmitter {
         this._$sidebar = createSVG('g', {
             append_to: this._$svg,
         });
+        this._$sidebar.style.display =
+            window.innerWidth >= 768 ? 'block' : 'none';
 
         const width = this._options.sidebar_config!.sidebar_width!;
         const height = this._options.bar_height! + this._options.padding!;

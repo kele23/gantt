@@ -3,10 +3,12 @@
     <head>
         <meta charset="UTF-8" />
         <title>Simple Gantt</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
         <link rel="stylesheet" href="src/styles/gantt.css" />
         <script src="src/index.ts" type="module"></script>
     </head>
-    <body>
+    <body style="margin: 0">
         <div style="padding: 16px 16px">
             <h1>Frappe Gantt</h1>
             <button id="testDates">Test dates</button>
@@ -87,7 +89,7 @@
                     name: 'Test overlay',
                     id: 'Task 7',
                     groupKey: 'PO765AF',
-                    color: '#880000'
+                    color: '#880000',
                 },
                 {
                     start: daysSince(2),
@@ -106,7 +108,7 @@
                     key: 'CA222ZF',
                     name: 'CA222ZF',
                     color: '#22882230',
-                    stamp: "#ff0000",
+                    stamp: '#ff0000',
                     title: 'La macchina ha delle note da verificare',
                 },
                 {
@@ -114,7 +116,7 @@
                     key: 'HQ222GF',
                     name: 'HQ222GF',
                     text: 'safsa',
-                    stamp: "#77ffaa",
+                    stamp: '#77ffaa',
                 },
                 {
                     id: '3',
@@ -195,7 +197,7 @@
                 auto_move_label: false,
                 enable_left_sidebar_list: true,
                 start_date: new Date('2025-01-01T03:24:00'),
-                end_date: new Date('2025-12-31T03:24:00')
+                end_date: new Date('2025-12-31T03:24:00'),
             });
             mutablity.changeViewMode('week', daysSince(2)); // render the gantt
             // }, 5000);
