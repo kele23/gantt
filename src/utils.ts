@@ -59,7 +59,7 @@ export function createEl({
     id?: string;
     classes?: string;
     append_to?: HTMLElement;
-    prepend_to?: HTMLElement;
+    prepend_to?: HTMLElement | SVGElement;
     type?: string;
 }): HTMLElement {
     let $el = document.createElement(type || 'div');

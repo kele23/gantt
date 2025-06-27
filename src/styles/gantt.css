@@ -72,6 +72,7 @@
                     10px
             );
             background-color: var(--g-header-background);
+            border-bottom: 1px solid var(-g-header-border, #cccccc);
             position: sticky;
             top: 0;
             left: 0;
@@ -224,7 +225,6 @@
     & .gantt {
         user-select: none;
         -webkit-user-select: none;
-        position: absolute;
 
         & .grid-background {
             fill: none;

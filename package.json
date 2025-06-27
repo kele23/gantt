@@ -1,6 +1,6 @@
 {
     "name": "@kele23/gantt",
-    "version": "0.1.18",
+    "version": "0.1.19",
     "description": "A simple, modern, interactive gantt library for the web based on Frappe Gantt",
     "main": "src/index.js",
     "type": "module",
@@ -62,7 +62,13 @@
         "*.css"
     ],
     "dependencies": {
+        "@kele23/gantt": "link:",
         "date-fns": "^4.1.0",
         "eventemitter3": "^5.0.1"
+    },
+    "pnpm": {
+        "overrides": {
+            "@kele23/gantt": "link:"
+        }
     }
 }

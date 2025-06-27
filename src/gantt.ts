@@ -389,10 +389,7 @@ export class Gantt extends EventEmitter {
             '--gv-column-width',
             this._config.column_width + 'px',
         );
-        this._config.header_height =
-            this._options.lower_header_height! +
-            this._options.upper_header_height! +
-            10;
+        this._config.header_height = 0;
     }
 
     private _setupDates() {
@@ -716,6 +713,9 @@ export class Gantt extends EventEmitter {
 
         const realContainerHeight = this._$container.clientHeight - 20;
 
+
+        console.log(realContainerHeight);
+
         const grid_height = Math.max(
             this._config.header_height +
                 this._options.padding! +
@@ -725,6 +725,8 @@ export class Gantt extends EventEmitter {
             realContainerHeight,
         );
         this._grid_height = grid_height;
+
+        console.log(this._grid_height);
 
         this._$svg.setAttribute('fill', 'white');
         this._$svg.setAttribute('width', '100%');
@@ -757,7 +759,7 @@ export class Gantt extends EventEmitter {
         this._$header = createEl({
             width: this._dates.length * this._config.column_width,
             classes: 'grid-header',
-            append_to: this._$container,
+            prepend_to: this._$container,
         });
 
         this._$upper_header = createEl({
